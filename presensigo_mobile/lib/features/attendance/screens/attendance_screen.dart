@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/location_service.dart';
 import '../../../core/utils/crypto_helper.dart';
 import '../../../data/services/api_service.dart';
 import '../../history/screens/history_screen.dart';
 import '../../settings/screens/settings_screen.dart';
+import '../../geofencing/screens/geofencing_screen.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -59,24 +61,27 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
   }
 
   Future<void> _checkIn() async {
-    if (_currentPosition == null) {
-      _showError('Location not available. Please enable GPS.');
-      return;
-    }
+    // Open geofencing screen first
+    final confirmedPosition = await Navigator.push<LatLng>(
+      context,
+      MaterialPageRoute(builder: (_) => const GeofencingScreen()),
+    );
+
+    if (confirmedPosition == null) return; // User cancelled
 
     setState(() => _isProcessing = true);
 
     final payload = {
-      'latitude': _currentPosition!.latitude,
-      'longitude': _currentPosition!.longitude,
+      'latitude': confirmedPosition.latitude,
+      'longitude': confirmedPosition.longitude,
       'device_uuid': 'device-123',
     };
 
     final hmac = CryptoHelper.generateHMAC(payload, 'your-secret-key');
 
     final result = await ApiService.checkIn(
-      latitude: _currentPosition!.latitude,
-      longitude: _currentPosition!.longitude,
+      latitude: confirmedPosition.latitude,
+      longitude: confirmedPosition.longitude,
       deviceUuid: 'device-123',
       hmacSignature: hmac,
     );
