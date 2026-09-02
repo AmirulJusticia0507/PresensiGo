@@ -26,20 +26,18 @@ func NewHandler(authUc *usecase.AuthUsecase, attUc *usecase.AttendanceUsecase) *
 }
 
 func (h *Handler) RegisterRoutes(r *mux.Router) {
-	api := r.PathPrefix("/api").Subrouter()
-
-	// Auth routes
-	api.HandleFunc("/auth/register", h.Register).Methods("POST")
-	api.HandleFunc("/auth/login", h.Login).Methods("POST")
+	// Auth routes (public)
+	r.HandleFunc("/api/auth/register", h.Register).Methods("POST")
+	r.HandleFunc("/api/auth/login", h.Login).Methods("POST")
 
 	// Attendance routes (protected)
-	api.HandleFunc("/attendance/check-in", h.CheckIn).Methods("POST")
-	api.HandleFunc("/attendance/check-out", h.CheckOut).Methods("POST")
-	api.HandleFunc("/attendance/today", h.GetTodayAttendance).Methods("GET")
-	api.HandleFunc("/attendance/history", h.GetHistory).Methods("GET")
+	r.HandleFunc("/api/attendance/check-in", h.CheckIn).Methods("POST")
+	r.HandleFunc("/api/attendance/check-out", h.CheckOut).Methods("POST")
+	r.HandleFunc("/api/attendance/today", h.GetTodayAttendance).Methods("GET")
+	r.HandleFunc("/api/attendance/history", h.GetHistory).Methods("GET")
 
 	// Location routes
-	api.HandleFunc("/locations", h.GetLocations).Methods("GET")
+	r.HandleFunc("/api/locations", h.GetLocations).Methods("GET")
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {

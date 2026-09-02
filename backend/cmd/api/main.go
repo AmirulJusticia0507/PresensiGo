@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 	"github.com/rs/cors"
 
+	"github.com/PresensiGo/backend/internal/auth"
 	"github.com/PresensiGo/backend/internal/config"
+	redisc "github.com/PresensiGo/backend/internal/cache"
 	deliveryhttp "github.com/PresensiGo/backend/internal/delivery/http"
 	"github.com/PresensiGo/backend/internal/delivery/http/middleware"
 	"github.com/PresensiGo/backend/internal/repository"
@@ -31,6 +34,14 @@ func main() {
 	}
 	log.Println("Connected to database")
 
+	redisClient, err := redisc.NewClient(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
+	if err != nil {
+		log.Printf("Warning: Redis not available: %v", err)
+	} else {
+		defer redisClient.Close()
+		log.Println("Connected to Redis")
+	}
+
 	userRepo := repository.NewUserRepository(db)
 	attRepo := repository.NewAttendanceRepository(db)
 
@@ -42,13 +53,22 @@ func main() {
 	middleware.InitJWT(cfg.JWT.Secret, cfg.JWT.ExpireHour)
 
 	r := mux.NewRouter()
-	r.Use(middleware.AuthMiddleware)
-	httpHandler.RegisterRoutes(r)
+
+	api := r.PathPrefix("/api").Subrouter()
+	api.Use(middleware.AuthMiddleware)
+	if redisClient != nil {
+		api.Use(middleware.RateLimitMiddleware(redisClient, 100, 15*time.Minute))
+	}
+
+	httpHandler.RegisterRoutes(api)
 
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status": "ok"}`))
 	}).Methods("GET")
+
+	r.HandleFunc("/api/auth/register", httpHandler.Register).Methods("POST")
+	r.HandleFunc("/api/auth/login", httpHandler.Login).Methods("POST")
 
 	port := cfg.Server.Port
 	if port == "" {
