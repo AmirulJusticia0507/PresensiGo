@@ -48,7 +48,14 @@ type ServerConfig struct {
 }
 
 func Load() *Config {
-	godotenv.Load()
+	err := godotenv.Load()
+	if err != nil {
+		// Try loading from parent directory
+		err = godotenv.Load("../.env")
+		if err != nil {
+			// Ignore - will use defaults or system env
+		}
+	}
 
 	return &Config{
 		DB: DBConfig{
@@ -107,10 +114,5 @@ func getEnvBool(key string, fallback bool) bool {
 }
 
 func (d *DBConfig) DSN() string {
-	return "host=" + d.Host +
-		" port=" + strconv.Itoa(d.Port) +
-		" user=" + d.User +
-		" password=" + d.Password +
-		" dbname=" + d.Name +
-		" sslmode=disable TimeZone=Asia/Jakarta"
+	return "postgres://" + d.User + ":" + d.Password + "@" + d.Host + ":" + strconv.Itoa(d.Port) + "/" + d.Name + "?sslmode=disable&TimeZone=Asia/Jakarta"
 }

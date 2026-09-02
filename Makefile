@@ -1,5 +1,3 @@
-.PHONY: dev build run db-up db-down db-reset db-shell test clean
-
 # Development
 dev:
 	@echo "Starting development server..."
