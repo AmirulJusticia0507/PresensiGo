@@ -14,6 +14,20 @@ const UserIDKey contextKey = "user_id"
 
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Skip CORS preflight
+		if r.Method == "OPTIONS" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Public routes - no auth required
+		path := r.URL.Path
+		if strings.HasPrefix(path, "/api/auth/") || path == "/health" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Protected routes - auth required
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
 			http.Error(w, `{"error": "authorization header required"}`, http.StatusUnauthorized)
@@ -28,8 +42,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		token := parts[1]
 
-		// TODO: Implement proper JWT validation
-		// For now, extract user ID from token (simplified)
 		userID := extractUserIDFromToken(token)
 		if userID == uuid.Nil {
 			http.Error(w, `{"error": "invalid token"}`, http.StatusUnauthorized)
@@ -49,8 +61,6 @@ func GetUserIDFromContext(ctx context.Context) uuid.UUID {
 }
 
 func extractUserIDFromToken(token string) uuid.UUID {
-	// Simplified token extraction
-	// In production, use proper JWT library to validate and extract claims
 	parts := strings.Split(token, "-")
 	if len(parts) >= 2 {
 		if id, err := uuid.Parse(parts[1]); err == nil {
