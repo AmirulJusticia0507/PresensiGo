@@ -5,6 +5,7 @@ import '../../../core/utils/location_service.dart';
 import '../../../core/utils/crypto_helper.dart';
 import '../../../data/services/api_service.dart';
 import '../../history/screens/history_screen.dart';
+import '../../settings/screens/settings_screen.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -179,6 +180,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const HistoryScreen()),
+                );
+              },
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.settings_outlined, color: AppTheme.primaryColor),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
                 );
               },
             ),

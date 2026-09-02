@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/biometric_service.dart';
 import '../../../data/services/api_service.dart';
 import '../../attendance/screens/attendance_screen.dart';
+import '../../settings/screens/settings_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,6 +19,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _biometricAvailable = false;
+  bool _biometricEnabled = false;
+  String _biometricName = 'Biometric';
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
 
@@ -31,6 +36,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
     _controller.forward();
+    _loadBiometricStatus();
   }
 
   @override
@@ -39,6 +45,48 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     _passwordController.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadBiometricStatus() async {
+    final available = await BiometricService.isAvailable();
+    final enabled = await BiometricService.isEnabled();
+    final biometrics = await BiometricService.getAvailableBiometrics();
+    final name = BiometricService.getBiometricName(biometrics);
+
+    setState(() {
+      _biometricAvailable = available;
+      _biometricEnabled = enabled;
+      _biometricName = name;
+    });
+
+    // Auto-prompt biometric if enabled and available
+    if (enabled && available) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) _biometricLogin();
+      });
+    }
+  }
+
+  Future<void> _biometricLogin() async {
+    final authenticated = await BiometricService.authenticate(
+      reason: 'Authenticate to sign in to PresensiGo',
+    );
+
+    if (authenticated && mounted) {
+      _navigateToAttendance();
+    }
+  }
+
+  void _navigateToAttendance() {
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => const AttendanceScreen(),
+        transitionsBuilder: (_, animation, __, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    );
   }
 
   Future<void> _login() async {
@@ -57,15 +105,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
     if (mounted) {
       if (result['success'] == true) {
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => const AttendanceScreen(),
-            transitionsBuilder: (_, animation, __, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-          ),
-        );
+        _navigateToAttendance();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -279,6 +319,80 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                           Icon(Icons.arrow_forward, size: 20, color: Colors.white),
                                         ],
                                       ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Biometric login button
+                    if (_biometricAvailable && _biometricEnabled) ...[
+                      const SizedBox(height: 20),
+                      GestureDetector(
+                        onTap: _biometricLogin,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.borderColor),
+                            boxShadow: AppShadows.small,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _biometricName == 'Face ID' ? Icons.face_rounded : Icons.fingerprint,
+                                size: 24,
+                                color: AppTheme.primaryColor,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Login with $_biometricName',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.primaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 20),
+
+                    // Settings link
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                        ).then((_) => _loadBiometricStatus());
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.settings_outlined,
+                              size: 18,
+                              color: AppTheme.primaryColor,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Settings',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.primaryColor,
                               ),
                             ),
                           ],
