@@ -39,6 +39,8 @@ func main() {
 
 	httpHandler := deliveryhttp.NewHandler(authUc, attUc)
 
+	middleware.InitJWT(cfg.JWT.Secret, cfg.JWT.ExpireHour)
+
 	r := mux.NewRouter()
 	r.Use(middleware.AuthMiddleware)
 	httpHandler.RegisterRoutes(r)

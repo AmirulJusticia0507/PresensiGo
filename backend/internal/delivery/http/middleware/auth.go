@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/PresensiGo/backend/internal/auth"
 	"github.com/google/uuid"
 )
 
@@ -12,22 +13,25 @@ type contextKey string
 
 const UserIDKey contextKey = "user_id"
 
+var jwtService *auth.JWTService
+
+func InitJWT(secret string, expireHour int) {
+	jwtService = auth.NewJWTService(secret, expireHour)
+}
+
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Skip CORS preflight
 		if r.Method == "OPTIONS" {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		// Public routes - no auth required
 		path := r.URL.Path
 		if strings.HasPrefix(path, "/api/auth/") || path == "/health" {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		// Protected routes - auth required
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
 			http.Error(w, `{"error": "authorization header required"}`, http.StatusUnauthorized)
@@ -42,13 +46,13 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		token := parts[1]
 
-		userID := extractUserIDFromToken(token)
-		if userID == uuid.Nil {
-			http.Error(w, `{"error": "invalid token"}`, http.StatusUnauthorized)
+		claims, err := jwtService.ValidateToken(token)
+		if err != nil {
+			http.Error(w, `{"error": "invalid or expired token"}`, http.StatusUnauthorized)
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), UserIDKey, userID)
+		ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -58,12 +62,4 @@ func GetUserIDFromContext(ctx context.Context) uuid.UUID {
 		return userID
 	}
 	return uuid.Nil
-}
-
-func extractUserIDFromToken(token string) uuid.UUID {
-	id, err := uuid.Parse(token)
-	if err != nil {
-		return uuid.Nil
-	}
-	return id
 }

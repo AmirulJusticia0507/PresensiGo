@@ -6,20 +6,23 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/PresensiGo/backend/internal/auth"
 	"github.com/PresensiGo/backend/internal/config"
 	"github.com/PresensiGo/backend/internal/model"
 	"github.com/PresensiGo/backend/internal/repository"
 )
 
 type AuthUsecase struct {
-	userRepo *repository.UserRepository
-	config   *config.Config
+	userRepo  *repository.UserRepository
+	config    *config.Config
+	jwtService *auth.JWTService
 }
 
 func NewAuthUsecase(userRepo *repository.UserRepository, cfg *config.Config) *AuthUsecase {
 	return &AuthUsecase{
-		userRepo: userRepo,
-		config:   cfg,
+		userRepo:   userRepo,
+		config:     cfg,
+		jwtService: auth.NewJWTService(cfg.JWT.Secret, cfg.JWT.ExpireHour),
 	}
 }
 
@@ -59,14 +62,15 @@ func (u *AuthUsecase) Login(req *model.LoginRequest) (*model.LoginResponse, erro
 		return nil, errors.New("invalid email or password")
 	}
 
-	// Device binding - auto-bind on first login, skip check for now
 	if user.DeviceUUID == nil {
 		_ = u.userRepo.UpdateDeviceUUID(user.ID, req.DeviceUUID)
 		user.DeviceUUID = &req.DeviceUUID
 	}
 
-	// Generate JWT (simplified - in production use jwt-go library)
-	token := generateToken(user.ID, u.config.JWT.Secret, u.config.JWT.ExpireHour)
+	token, err := u.jwtService.GenerateToken(user.ID, user.Role)
+	if err != nil {
+		return nil, errors.New("failed to generate token")
+	}
 
 	return &model.LoginResponse{
 		Token: token,
@@ -80,8 +84,4 @@ func (u *AuthUsecase) GetByID(id uuid.UUID) (*model.User, error) {
 
 func (u *AuthUsecase) UpdateFaceEmbedding(userID uuid.UUID, embedding []byte) error {
 	return u.userRepo.UpdateFaceEmbedding(userID, embedding)
-}
-
-func generateToken(userID uuid.UUID, secret string, expireHour int) string {
-	return userID.String()
 }
