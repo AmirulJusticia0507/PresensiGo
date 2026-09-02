@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/biometric_service.dart';
 import '../../../data/services/api_service.dart';
 import '../../attendance/screens/attendance_screen.dart';
-import '../../settings/screens/settings_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -87,7 +87,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
     setState(() => _isLoading = true);
 
-    final deviceUuid = const Uuid().v4();
+    // Get or create persistent device UUID
+    final prefs = await SharedPreferences.getInstance();
+    String? deviceUuid = prefs.getString('device_uuid');
+    if (deviceUuid == null) {
+      deviceUuid = const Uuid().v4();
+      await prefs.setString('device_uuid', deviceUuid);
+    }
+
     final result = await ApiService.login(
       email: _emailController.text.trim(),
       password: _passwordController.text,
