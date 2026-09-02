@@ -8,9 +8,10 @@ class BiometricService {
 
   static Future<bool> isAvailable() async {
     try {
-      final isAvailable = await _localAuth.canCheckBiometrics;
       final isDeviceSupported = await _localAuth.isDeviceSupported();
-      return isAvailable && isDeviceSupported;
+      if (isDeviceSupported) return true;
+      final canCheck = await _localAuth.canCheckBiometrics;
+      return canCheck;
     } catch (e) {
       return false;
     }
