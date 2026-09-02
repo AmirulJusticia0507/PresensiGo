@@ -6,14 +6,15 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/PresensiGo/backend/internal/auth"
 	"github.com/PresensiGo/backend/internal/config"
 	"github.com/PresensiGo/backend/internal/model"
 	"github.com/PresensiGo/backend/internal/repository"
 )
 
 type AttendanceUsecase struct {
-	attRepo  *repository.AttendanceRepository
-	config   *config.Config
+	attRepo *repository.AttendanceRepository
+	config  *config.Config
 }
 
 func NewAttendanceUsecase(attRepo *repository.AttendanceRepository, cfg *config.Config) *AttendanceUsecase {
@@ -24,18 +25,21 @@ func NewAttendanceUsecase(attRepo *repository.AttendanceRepository, cfg *config.
 }
 
 func (u *AttendanceUsecase) CheckIn(userID uuid.UUID, req *model.CheckInRequest) (*model.Attendance, error) {
-	// Verify HMAC signature
-	if !u.verifyHMAC(req, req.HMACSig) {
+	payload := map[string]interface{}{
+		"user_id":     userID.String(),
+		"latitude":    req.Latitude,
+		"longitude":   req.Longitude,
+		"device_uuid": req.DeviceUUID,
+	}
+	if !auth.VerifyHMAC(payload, req.HMACSig, u.config.JWT.Secret) {
 		return nil, errors.New("invalid signature")
 	}
 
-	// Find nearest location
 	location, err := u.attRepo.FindNearestLocation(req.Latitude, req.Longitude)
 	if err != nil {
 		return nil, errors.New("no location found nearby")
 	}
 
-	// Check geofence
 	inside, err := u.attRepo.CheckGeofence(location.ID, req.Latitude, req.Longitude)
 	if err != nil {
 		return nil, err
@@ -44,14 +48,13 @@ func (u *AttendanceUsecase) CheckIn(userID uuid.UUID, req *model.CheckInRequest)
 		return nil, errors.New("you are outside the geofence radius")
 	}
 
-	// Check if already checked in today
 	existing, _ := u.attRepo.FindTodayByUser(userID)
 	if existing != nil && existing.CheckOutTime == nil {
 		return nil, errors.New("already checked in today")
 	}
 
 	now := time.Now()
-	isLate := now.Hour() >= 9 // Assume late after 9 AM
+	isLate := now.Hour() >= 9
 
 	att := &model.Attendance{
 		ID:              uuid.New(),
@@ -80,12 +83,16 @@ func (u *AttendanceUsecase) CheckIn(userID uuid.UUID, req *model.CheckInRequest)
 }
 
 func (u *AttendanceUsecase) CheckOut(userID uuid.UUID, req *model.CheckOutRequest) (*model.Attendance, error) {
-	// Verify HMAC signature
-	if !u.verifyHMAC(req, req.HMACSig) {
+	payload := map[string]interface{}{
+		"user_id":     userID.String(),
+		"latitude":    req.Latitude,
+		"longitude":   req.Longitude,
+		"device_uuid": req.DeviceUUID,
+	}
+	if !auth.VerifyHMAC(payload, req.HMACSig, u.config.JWT.Secret) {
 		return nil, errors.New("invalid signature")
 	}
 
-	// Find today's attendance
 	att, err := u.attRepo.FindTodayByUser(userID)
 	if err != nil {
 		return nil, errors.New("no check-in record found today")
@@ -94,7 +101,6 @@ func (u *AttendanceUsecase) CheckOut(userID uuid.UUID, req *model.CheckOutReques
 		return nil, errors.New("already checked out today")
 	}
 
-	// Verify device
 	if att.DeviceUUID != req.DeviceUUID {
 		return nil, errors.New("device mismatch")
 	}
@@ -123,10 +129,4 @@ func (u *AttendanceUsecase) GetTodayAttendance(userID uuid.UUID) (*model.Attenda
 
 func (u *AttendanceUsecase) GetLocations() ([]model.Location, error) {
 	return u.attRepo.GetLocations()
-}
-
-func (u *AttendanceUsecase) verifyHMAC(payload interface{}, signature string) bool {
-	// TODO: Implement proper HMAC verification
-	// For now, skip verification for development
-	return true
 }
