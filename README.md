@@ -1,4 +1,3 @@
-
 # Smart Attendance System
 
 Sistem presensi modern berbasis geofencing dan face recognition real-time dengan kemampuan offline-first sync.
@@ -72,10 +71,9 @@ Penguncian akun untuk mencegah penitipan presensi atau gonta-ganti perangkat.
 └── README.md
 ```
 
+## Alur Data Presensi (Sequence Flow)
 
-
-Alur Data Presensi (Sequence Flow)
-Plaintext
+```text
 [Flutter App]
      │
      ├── 1. Ambil GPS & Foto Wajah (Cek Mock GPS)
@@ -98,23 +96,29 @@ Plaintext
      ├── 6. Simpan Foto ke MinIO / S3
      ├── 7. Insert Attendance Record ────────────────────► [PostgreSQL]
      └── 8. Invalidate Cache ────────────────────────────► [Redis]
-Quick Start (Local Setup)
+```
+
+## Quick Start (Local Setup)
 
 1. Jalankan Dependencies (Database & Storage)
-   Bash
+   ```bash
    docker-compose up -d
+   ```
 2. Jalankan Backend (Go)
-   Bash
+   ```bash
    cd backend
    go mod download
    go run cmd/api/main.go
+   ```
 3. Jalankan AI Microservice
-   Bash
+   ```bash
    cd ai-service
    pip install -r requirements.txt
    uvicorn main:app --port 8001
+   ```
 4. Jalankan Mobile App (Flutter)
-   Bash
+   ```bash
    cd mobile
    flutter pub get
    flutter run
+   ```
