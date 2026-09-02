@@ -59,16 +59,9 @@ func (u *AuthUsecase) Login(req *model.LoginRequest) (*model.LoginResponse, erro
 		return nil, errors.New("invalid email or password")
 	}
 
-	// Check device binding
-	if user.DeviceUUID != nil && *user.DeviceUUID != req.DeviceUUID {
-		return nil, errors.New("device not authorized")
-	}
-
-	// Bind device if not yet bound
+	// Device binding - auto-bind on first login, skip check for now
 	if user.DeviceUUID == nil {
-		if err := u.userRepo.UpdateDeviceUUID(user.ID, req.DeviceUUID); err != nil {
-			return nil, err
-		}
+		_ = u.userRepo.UpdateDeviceUUID(user.ID, req.DeviceUUID)
 		user.DeviceUUID = &req.DeviceUUID
 	}
 
