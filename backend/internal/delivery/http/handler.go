@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
+	"github.com/PresensiGo/backend/internal/delivery/http/middleware"
 	"github.com/PresensiGo/backend/internal/model"
 	"github.com/PresensiGo/backend/internal/usecase"
 )
@@ -176,10 +177,5 @@ func respondError(w http.ResponseWriter, status int, message string) {
 }
 
 func getUserIDFromContext(r *http.Request) uuid.UUID {
-	// TODO: Get from JWT middleware context
-	if id := r.Header.Get("X-User-ID"); id != "" {
-		parsed, _ := uuid.Parse(id)
-		return parsed
-	}
-	return uuid.Nil
+	return middleware.GetUserIDFromContext(r.Context())
 }

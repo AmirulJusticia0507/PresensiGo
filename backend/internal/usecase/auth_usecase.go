@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"errors"
-	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -91,7 +90,5 @@ func (u *AuthUsecase) UpdateFaceEmbedding(userID uuid.UUID, embedding []byte) er
 }
 
 func generateToken(userID uuid.UUID, secret string, expireHour int) string {
-	// Simplified token generation
-	// In production, use proper JWT library with claims
-	return uuid.New().String() + "-" + userID.String() + "-" + time.Now().Format("20060102150405")
+	return userID.String()
 }

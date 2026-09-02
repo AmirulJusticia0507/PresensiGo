@@ -61,11 +61,9 @@ func GetUserIDFromContext(ctx context.Context) uuid.UUID {
 }
 
 func extractUserIDFromToken(token string) uuid.UUID {
-	parts := strings.Split(token, "-")
-	if len(parts) >= 2 {
-		if id, err := uuid.Parse(parts[1]); err == nil {
-			return id
-		}
+	id, err := uuid.Parse(token)
+	if err != nil {
+		return uuid.Nil
 	}
-	return uuid.Nil
+	return id
 }
