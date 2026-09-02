@@ -58,23 +58,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       _biometricEnabled = enabled;
       _biometricName = name;
     });
-
-    // Auto-prompt biometric if enabled and available
-    if (enabled && available) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) _biometricLogin();
-      });
-    }
-  }
-
-  Future<void> _biometricLogin() async {
-    final authenticated = await BiometricService.authenticate(
-      reason: 'Authenticate to sign in to PresensiGo',
-    );
-
-    if (authenticated && mounted) {
-      _navigateToAttendance();
-    }
   }
 
   void _navigateToAttendance() {
@@ -87,6 +70,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         },
       ),
     );
+  }
+
+  Future<void> _biometricLogin() async {
+    final authenticated = await BiometricService.authenticate(
+      reason: 'Authenticate to sign in to PresensiGo',
+    );
+
+    if (authenticated && mounted) {
+      _navigateToAttendance();
+    }
   }
 
   Future<void> _login() async {
@@ -145,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Logo with gradient background
+                    // Logo
                     Container(
                       width: 100,
                       height: 100,
@@ -214,7 +207,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             ),
                             const SizedBox(height: 24),
 
-                            // Email field
+                            // Email
                             Text(
                               'Email',
                               style: TextStyle(
@@ -243,7 +236,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             ),
                             const SizedBox(height: 16),
 
-                            // Password field
+                            // Password
                             Text(
                               'Password',
                               style: TextStyle(
@@ -321,80 +314,30 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                       ),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
 
-                    // Biometric login button
-                    if (_biometricAvailable && _biometricEnabled) ...[
-                      const SizedBox(height: 20),
-                      GestureDetector(
-                        onTap: _biometricLogin,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.borderColor),
-                            boxShadow: AppShadows.small,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _biometricName == 'Face ID' ? Icons.face_rounded : Icons.fingerprint,
-                                size: 24,
-                                color: AppTheme.primaryColor,
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                'Login with $_biometricName',
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.primaryColor,
+                            // Fingerprint button (show if biometric enabled)
+                            if (_biometricAvailable && _biometricEnabled) ...[
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 52,
+                                child: OutlinedButton.icon(
+                                  onPressed: _biometricLogin,
+                                  icon: Icon(
+                                    _biometricName == 'Face ID' ? Icons.face_rounded : Icons.fingerprint,
+                                    size: 24,
+                                  ),
+                                  label: Text('Login with $_biometricName'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.primaryColor,
+                                    side: const BorderSide(color: AppTheme.primaryColor),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
-                          ),
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 20),
-
-                    // Settings link
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                        ).then((_) => _loadBiometricStatus());
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.settings_outlined,
-                              size: 18,
-                              color: AppTheme.primaryColor,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Settings',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: AppTheme.primaryColor,
-                              ),
-                            ),
                           ],
                         ),
                       ),
