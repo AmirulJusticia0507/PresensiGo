@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
+	"github.com/rs/cors"
 
 	"github.com/PresensiGo/backend/internal/config"
 	deliveryhttp "github.com/PresensiGo/backend/internal/delivery/http"
@@ -36,11 +37,11 @@ func main() {
 	authUc := usecase.NewAuthUsecase(userRepo, cfg)
 	attUc := usecase.NewAttendanceUsecase(attRepo, cfg)
 
-	handler := deliveryhttp.NewHandler(authUc, attUc)
+	httpHandler := deliveryhttp.NewHandler(authUc, attUc)
 
 	r := mux.NewRouter()
 	r.Use(middleware.AuthMiddleware)
-	handler.RegisterRoutes(r)
+	httpHandler.RegisterRoutes(r)
 
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -52,8 +53,17 @@ func main() {
 		port = "8080"
 	}
 
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: true,
+	})
+
+	bh := c.Handler(r)
+
 	fmt.Printf("Server starting on port %s\n", port)
-	if err := http.ListenAndServe(":"+port, r); err != nil {
+	if err := http.ListenAndServe(":"+port, bh); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
