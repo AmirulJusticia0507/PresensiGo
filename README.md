@@ -52,6 +52,67 @@ Penguncian akun untuk mencegah penitipan presensi atau gonta-ganti perangkat.
 
 ---
 
+## Ceklist Fitur
+
+### Infrastructure & DevOps
+- [x] Docker Compose (PostgreSQL/PostGIS, Redis, MinIO)
+- [x] Makefile & PowerShell dev script
+- [x] Database migration (init.sql)
+
+### Backend API (Go)
+- [x] Auth: Register & Login (bcrypt)
+- [x] Device UUID binding
+- [x] Geofencing: PostGIS `ST_DWithin` validation
+- [x] Attendance: Check-in & Check-out
+- [x] Attendance: Duplicate check (satu kali check-in per hari)
+- [x] Attendance: Late detection
+- [x] Attendance: History
+- [x] Location: Get locations
+- [ ] **JWT authentication** — token masih raw UUID, belum ada signing/expiry
+- [ ] **HMAC-SHA256 verification** — `verifyHMAC()` masih stub (selalu return true)
+- [ ] **Redis integration** — config ada tapi client belum connect
+- [ ] **MinIO/S3 integration** — config ada tapi belum upload selfie
+- [ ] **AI Service communication** — belum ada HTTP client ke Python service
+- [ ] **Offline sync endpoint** — model & table ada, tapi handler/uc/repo belum dibuat
+- [ ] **Location CRUD (POST/PUT/DELETE)** — hanya GET yang di-expose
+- [ ] **Admin endpoints** — user management, reporting
+- [ ] **User profile endpoint** — GET/PUT profile
+- [ ] **Face embedding update endpoint** — usecase ada, handler belum
+- [ ] **Input validation** — model sudah ada `validate` tag tapi belum dipakai
+- [ ] **Unit tests**
+
+### Mobile App (Flutter)
+- [x] Login screen (email/password)
+- [x] Biometric login
+- [x] Attendance screen (check-in/out button)
+- [x] Geofencing map (FlutterMap + OpenStreetMap)
+- [x] History screen
+- [x] Settings screen (biometric toggle)
+- [x] Location service (GPS permission & positioning)
+- [x] HMAC-SHA256 signature generation
+- [x] Theme (Material 3)
+- [ ] **Offline-first sync engine** — Hive ada di pubspec tapi belum dipakai
+- [ ] **Camera / selfie capture** — dependency ada tapi belum dipakai
+- [ ] **Face recognition UI** — belum ada screen verifikasi wajah
+- [ ] **Provider state management** — dependency ada tapi belum dipakai
+- [ ] **flutter_secure_storage** — token masih di SharedPreferences biasa
+- [ ] **Register screen** — API method ada, UI belum
+- [ ] **Profile screen**
+- [ ] **Mock GPS detection** — belum ada kode
+- [ ] **Auto-login / splash screen** — belum ada session persistence check
+- [ ] **Error handling & retry logic**
+- [ ] **Unit tests**
+
+### AI Service (Python)
+- [ ] **Belum ada sama sekali** — belum ada directory `ai-service/`
+- [ ] FastAPI server setup
+- [ ] InsightFace integration (face embedding)
+- [ ] Liveness detection (anti-spoofing)
+- [ ] Cosine similarity matching
+- [ ] gRPC/HTTP endpoint untuk Go backend
+
+---
+
 ## Struktur Repositori
 
 ```text
