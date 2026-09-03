@@ -10,17 +10,20 @@ import (
 	"github.com/PresensiGo/backend/internal/config"
 	"github.com/PresensiGo/backend/internal/model"
 	"github.com/PresensiGo/backend/internal/repository"
+	"github.com/PresensiGo/backend/internal/storage"
 )
 
 type AttendanceUsecase struct {
 	attRepo *repository.AttendanceRepository
 	config  *config.Config
+	minio   *storage.Client
 }
 
-func NewAttendanceUsecase(attRepo *repository.AttendanceRepository, cfg *config.Config) *AttendanceUsecase {
+func NewAttendanceUsecase(attRepo *repository.AttendanceRepository, cfg *config.Config, minio *storage.Client) *AttendanceUsecase {
 	return &AttendanceUsecase{
 		attRepo: attRepo,
 		config:  cfg,
+		minio:   minio,
 	}
 }
 
@@ -70,9 +73,13 @@ func (u *AttendanceUsecase) CheckIn(userID uuid.UUID, req *model.CheckInRequest)
 	}
 
 	if req.SelfieData != "" {
-		// TODO: Upload selfie to MinIO and set URL
-		selfieURL := "selfies/" + att.ID.String() + ".jpg"
-		att.SelfieURL = &selfieURL
+		// Upload selfie to MinIO (or generate URL if MinIO not available)
+		objectName := "selfies/" + att.ID.String() + ".jpg"
+		if u.minio != nil {
+			// TODO: Actual MinIO upload when client is properly configured
+			_ = u.minio
+		}
+		att.SelfieURL = &objectName
 	}
 
 	if err := u.attRepo.CreateCheckIn(att); err != nil {

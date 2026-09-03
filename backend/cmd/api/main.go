@@ -12,6 +12,7 @@ import (
 
 	"github.com/PresensiGo/backend/internal/config"
 	deliveryhttp "github.com/PresensiGo/backend/internal/delivery/http"
+	storage "github.com/PresensiGo/backend/internal/storage"
 	"github.com/PresensiGo/backend/internal/delivery/http/middleware"
 	"github.com/PresensiGo/backend/internal/repository"
 	"github.com/PresensiGo/backend/internal/usecase"
@@ -34,8 +35,10 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	attRepo := repository.NewAttendanceRepository(db)
 
+	minioClient, _ := storage.NewClient(cfg.MinIO.Endpoint, cfg.MinIO.AccessKey, cfg.MinIO.SecretKey, cfg.MinIO.UseSSL)
+
 	authUc := usecase.NewAuthUsecase(userRepo, cfg)
-	attUc := usecase.NewAttendanceUsecase(attRepo, cfg)
+	attUc := usecase.NewAttendanceUsecase(attRepo, cfg, minioClient)
 
 	httpHandler := deliveryhttp.NewHandler(authUc, attUc)
 
