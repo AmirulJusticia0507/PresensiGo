@@ -67,12 +67,18 @@ type HistoryQuery struct {
 }
 
 type OfflinePayload struct {
-	UserID          uuid.UUID `json:"user_id"`
-	ActionType      string    `json:"action_type"`
-	Latitude        float64   `json:"latitude"`
-	Longitude       float64   `json:"longitude"`
-	DeviceTimestamp time.Time `json:"device_timestamp"`
-	SelfieData      string    `json:"selfie_data,omitempty"`
+	ID              uuid.UUID    `json:"id"`
+	UserID          uuid.UUID    `json:"user_id"`
+	ActionType      string       `json:"action_type"`
+	Payload         string       `json:"payload,omitempty"`
+	Latitude        float64      `json:"latitude"`
+	Longitude       float64      `json:"longitude"`
+	DeviceTimestamp time.Time    `json:"device_timestamp"`
+	SelfieData      string       `json:"selfie_data,omitempty"`
+	Synced          bool         `json:"synced"`
+	SyncAttempts    int          `json:"sync_attempts"`
+	HMACSignature   string       `json:"-"`
+	CreatedAt       time.Time    `json:"created_at"`
 }
 
 type SyncRequest struct {
