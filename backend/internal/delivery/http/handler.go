@@ -44,6 +44,7 @@ func (h *Handler) RegisterRoutes(r *mux.Router) {
 
 	// User profile route
 	r.HandleFunc("/api/profile", h.GetProfile).Methods("GET")
+	r.HandleFunc("/api/profile/face-embedding", h.UpdateFaceEmbedding).Methods("PUT")
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
@@ -184,6 +185,27 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, user)
+}
+
+func (h *Handler) UpdateFaceEmbedding(w http.ResponseWriter, r *http.Request) {
+	userID := getUserIDFromContext(r)
+	if userID == uuid.Nil {
+		respondError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	var req model.UpdateFaceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.authUc.UpdateFaceEmbedding(userID, req.FaceEmbedding); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]string{"message": "face embedding updated"})
 }
 
 func (h *Handler) CreateLocation(w http.ResponseWriter, r *http.Request) {
