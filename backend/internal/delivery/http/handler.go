@@ -41,6 +41,9 @@ func (h *Handler) RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/api/locations", h.CreateLocation).Methods("POST")
 	r.HandleFunc("/api/locations/{id}", h.UpdateLocation).Methods("PUT")
 	r.HandleFunc("/api/locations/{id}", h.DeleteLocation).Methods("DELETE")
+
+	// User profile route
+	r.HandleFunc("/api/profile", h.GetProfile).Methods("GET")
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
@@ -165,6 +168,22 @@ func (h *Handler) GetLocations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, locations)
+}
+
+func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
+	userID := getUserIDFromContext(r)
+	if userID == uuid.Nil {
+		respondError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	user, err := h.authUc.GetByID(userID)
+	if err != nil {
+		respondError(w, http.StatusNotFound, "user not found")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, user)
 }
 
 func (h *Handler) CreateLocation(w http.ResponseWriter, r *http.Request) {
