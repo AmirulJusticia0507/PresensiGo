@@ -190,3 +190,15 @@ func (r *AttendanceRepository) GetLocations() ([]model.Location, error) {
 	}
 	return locations, nil
 }
+
+func (r *AttendanceRepository) UpdateLocation(id uuid.UUID, req *model.Location) error {
+	query := `UPDATE locations SET name = $1, address = $2, latitude = $3, longitude = $4, radius_meters = $5 WHERE id = $6`
+	_, err := r.db.Exec(query, req.Name, req.Address, req.Latitude, req.Longitude, req.RadiusMeters, id)
+	return err
+}
+
+func (r *AttendanceRepository) DeleteLocation(id uuid.UUID) error {
+	query := `DELETE FROM locations WHERE id = $1`
+	_, err := r.db.Exec(query, id)
+	return err
+}

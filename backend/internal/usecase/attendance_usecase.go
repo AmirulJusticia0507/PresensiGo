@@ -137,3 +137,15 @@ func (u *AttendanceUsecase) GetTodayAttendance(userID uuid.UUID) (*model.Attenda
 func (u *AttendanceUsecase) GetLocations() ([]model.Location, error) {
 	return u.attRepo.GetLocations()
 }
+
+func (u *AttendanceUsecase) CreateLocation(req *model.Location) error {
+	return u.attRepo.CreateLocation(req)
+}
+
+func (u *AttendanceUsecase) UpdateLocation(id uuid.UUID, req *model.Location) error {
+	return u.attRepo.UpdateLocation(id, req)
+}
+
+func (u *AttendanceUsecase) DeleteLocation(id uuid.UUID) error {
+	return u.attRepo.DeleteLocation(id)
+}

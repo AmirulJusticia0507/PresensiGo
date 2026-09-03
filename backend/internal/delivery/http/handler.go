@@ -38,6 +38,9 @@ func (h *Handler) RegisterRoutes(r *mux.Router) {
 
 	// Location routes
 	r.HandleFunc("/api/locations", h.GetLocations).Methods("GET")
+	r.HandleFunc("/api/locations", h.CreateLocation).Methods("POST")
+	r.HandleFunc("/api/locations/{id}", h.UpdateLocation).Methods("PUT")
+	r.HandleFunc("/api/locations/{id}", h.DeleteLocation).Methods("DELETE")
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
@@ -162,6 +165,60 @@ func (h *Handler) GetLocations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, locations)
+}
+
+func (h *Handler) CreateLocation(w http.ResponseWriter, r *http.Request) {
+	var req model.Location
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.attUc.CreateLocation(&req); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, req)
+}
+
+func (h *Handler) UpdateLocation(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := uuid.Parse(vars["id"])
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid location ID")
+		return
+	}
+
+	var req model.Location
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.attUc.UpdateLocation(id, &req); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	respondJSON(w, http.StatusOK, req)
+}
+
+func (h *Handler) DeleteLocation(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := uuid.Parse(vars["id"])
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid location ID")
+		return
+	}
+
+	err = h.attUc.DeleteLocation(id)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]string{"message": "location deleted"})
 }
 
 func respondJSON(w http.ResponseWriter, status int, data interface{}) {
