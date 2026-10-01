@@ -2083,3 +2083,13 @@ func TestStructuredLogging_ErrorResponseFormatConsistent(t *testing.T) {
 		})
 	}
 }
+
+
+// INTENTIONAL FAILURE FOR CI/CD TESTING - Task 7 End-to-End Validation
+// This test is deliberately designed to fail to validate the CI/CD pipeline catches test failures
+func TestIntentionalFailure_CIPipelineValidation(t *testing.T) {
+	// This test is expected to FAIL during the first push
+	// It confirms that the CI/CD workflow properly detects and reports test failures
+	// After this test is pushed and workflow shows red status, it will be fixed
+	t.Error("INTENTIONAL: This test must fail to validate CI pipeline is working properly")
+}
