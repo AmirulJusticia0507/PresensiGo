@@ -1,9 +1,12 @@
 package http
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -33,15 +36,28 @@ type AttendanceUsecaseIface interface {
 	DeleteLocation(id uuid.UUID) error
 }
 
-type Handler struct {
-	authUc AuthUsecaseIface
-	attUc  AttendanceUsecaseIface
+// RedisClientIface defines the Redis operations required by the HTTP handler.
+type RedisClientIface interface {
+	IsConnected(ctx context.Context) bool
+	Close() error
+	Increment(ctx context.Context, key string, ttl time.Duration) (int64, error)
+	Get(ctx context.Context, key string) (string, error)
+	Delete(ctx context.Context, keys ...string) error
 }
 
-func NewHandler(authUc AuthUsecaseIface, attUc AttendanceUsecaseIface) *Handler {
+type Handler struct {
+	authUc      AuthUsecaseIface
+	attUc       AttendanceUsecaseIface
+	db          *sql.DB
+	redisClient RedisClientIface
+}
+
+func NewHandler(authUc AuthUsecaseIface, attUc AttendanceUsecaseIface, db *sql.DB, redisClient RedisClientIface) *Handler {
 	return &Handler{
-		authUc: authUc,
-		attUc:  attUc,
+		authUc:      authUc,
+		attUc:       attUc,
+		db:          db,
+		redisClient: redisClient,
 	}
 }
 
@@ -57,6 +73,32 @@ func validateRequest(w http.ResponseWriter, r *http.Request, dst interface{}) er
 		return err
 	}
 	return nil
+}
+
+// Health returns liveness check - simple ok response
+func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
+	respondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// HealthReady returns readiness check - verifies Redis and database connectivity
+func (h *Handler) HealthReady(w http.ResponseWriter, r *http.Request) {
+	// Check database connectivity
+	dbOK := h.db.Ping() == nil
+
+	// Check Redis connectivity using context
+	ctx := r.Context()
+	redisOK := h.redisClient.IsConnected(ctx)
+
+	// Both must be OK for readiness
+	ready := dbOK && redisOK
+
+	if ready {
+		respondJSON(w, http.StatusOK, map[string]bool{"ready": true})
+	} else {
+		// Return 503 Service Unavailable if not ready
+		w.WriteHeader(http.StatusServiceUnavailable)
+		respondJSON(w, http.StatusServiceUnavailable, map[string]bool{"ready": false})
+	}
 }
 
 func (h *Handler) RegisterRoutes(r *mux.Router) {
