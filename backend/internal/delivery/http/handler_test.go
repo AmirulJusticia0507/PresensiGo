@@ -86,6 +86,10 @@ func (m *mockAttendanceUsecase) Sync(userID uuid.UUID, req *model.SyncRequest) [
 	return []model.SyncResult{}
 }
 
+func (m *mockAttendanceUsecase) GetSyncStatus(userID uuid.UUID) (*model.SyncStatusResponse, error) {
+	return &model.SyncStatusResponse{PendingCount: 0, StuckCount: 0}, nil
+}
+
 func newTestHandler() (*Handler, *mux.Router) {
 	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
 	r := mux.NewRouter()
@@ -901,6 +905,49 @@ func TestErrorResponse_ContentTypeApplicationJSON(t *testing.T) {
 				t.Errorf("Expected Content-Type 'application/json', got '%s' for %s", contentType, test.name)
 			}
 		})
+	}
+}
+
+// TestGetSyncStatus_Authorized verifies sync status endpoint returns 200 for authorized user
+func TestGetSyncStatus_Authorized(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
+
+	userID := uuid.New()
+	ctx := context.WithValue(context.Background(), middleware.UserIDKey, userID)
+	req := httptest.NewRequest(http.MethodGet, "/api/attendance/sync/status", nil)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.GetSyncStatus(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	var response map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if _, ok := response["pending_count"]; !ok {
+		t.Error("expected pending_count in response")
+	}
+	if _, ok := response["stuck_count"]; !ok {
+		t.Error("expected stuck_count in response")
+	}
+}
+
+// TestGetSyncStatus_Unauthorized verifies sync status endpoint returns 401 without auth
+func TestGetSyncStatus_Unauthorized(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/attendance/sync/status", nil)
+	w := httptest.NewRecorder()
+
+	h.GetSyncStatus(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
 	}
 }
 

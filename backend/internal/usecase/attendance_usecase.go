@@ -20,22 +20,24 @@ import (
 )
 
 type AttendanceUsecase struct {
-	attRepo  *repository.AttendanceRepository
-	userRepo *repository.UserRepository
-	config   *config.Config
-	minio    *storage.Client
-	faceAI   *ai.Client
+	attRepo       *repository.AttendanceRepository
+	userRepo      *repository.UserRepository
+	offlineRepo   *repository.OfflineQueueRepository
+	config        *config.Config
+	minio         *storage.Client
+	faceAI        *ai.Client
 }
 
 const maxSelfieSize = 1024 * 1024
 
-func NewAttendanceUsecase(attRepo *repository.AttendanceRepository, userRepo *repository.UserRepository, cfg *config.Config, minio *storage.Client, faceAI *ai.Client) *AttendanceUsecase {
+func NewAttendanceUsecase(attRepo *repository.AttendanceRepository, userRepo *repository.UserRepository, offlineRepo *repository.OfflineQueueRepository, cfg *config.Config, minio *storage.Client, faceAI *ai.Client) *AttendanceUsecase {
 	return &AttendanceUsecase{
-		attRepo:  attRepo,
-		userRepo: userRepo,
-		config:   cfg,
-		minio:    minio,
-		faceAI:   faceAI,
+		attRepo:     attRepo,
+		userRepo:    userRepo,
+		offlineRepo: offlineRepo,
+		config:      cfg,
+		minio:       minio,
+		faceAI:      faceAI,
 	}
 }
 
@@ -277,6 +279,20 @@ func (u *AttendanceUsecase) Sync(userID uuid.UUID, req *model.SyncRequest) []mod
 			continue
 		}
 
+		if u.offlineRepo != nil {
+			var payload model.CheckInRequest
+			_ = json.Unmarshal(action.Payload, &payload)
+			_ = u.offlineRepo.Create(&model.OfflinePayload{
+				ID:              uuid.New(),
+				UserID:          userID,
+				ActionType:      action.ActionType,
+				Payload:         string(action.Payload),
+				DeviceTimestamp: time.Unix(payload.Timestamp, 0),
+				Synced:          false,
+				SyncAttempts:    0,
+			})
+		}
+
 		var attendance *model.Attendance
 		var err error
 		switch action.ActionType {
@@ -305,6 +321,31 @@ func (u *AttendanceUsecase) Sync(userID uuid.UUID, req *model.SyncRequest) []mod
 		results = append(results, result)
 	}
 	return results
+}
+
+func (u *AttendanceUsecase) GetSyncStatus(userID uuid.UUID) (*model.SyncStatusResponse, error) {
+	if u.offlineRepo == nil {
+		return &model.SyncStatusResponse{
+			PendingCount: 0,
+			StuckCount:   0,
+			LastSyncAt:   nil,
+		}, nil
+	}
+	unsynced, err := u.offlineRepo.GetUnsynced(userID)
+	if err != nil {
+		return nil, err
+	}
+	pending := len(unsynced)
+	stuck := 0
+	for _, item := range unsynced {
+		if item.SyncAttempts >= 5 {
+			stuck++
+		}
+	}
+	return &model.SyncStatusResponse{
+		PendingCount: pending,
+		StuckCount:   stuck,
+	}, nil
 }
 
 func (u *AttendanceUsecase) GetHistory(userID uuid.UUID, limit, offset int) ([]model.AttendanceResponse, error) {

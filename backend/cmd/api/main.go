@@ -47,6 +47,7 @@ func main() {
 
 	userRepo := repository.NewUserRepository(db)
 	attRepo := repository.NewAttendanceRepository(db)
+	offlineRepo := repository.NewOfflineQueueRepository(db)
 
 	minioCtx, cancelMinio := context.WithTimeout(context.Background(), 10*time.Second)
 	minioClient, err := storage.NewClient(
@@ -68,7 +69,7 @@ func main() {
 		time.Duration(cfg.AI.TimeoutSeconds)*time.Second,
 	)
 	authUc := usecase.NewAuthUsecase(userRepo, cfg, faceAI)
-	attUc := usecase.NewAttendanceUsecase(attRepo, userRepo, cfg, minioClient, faceAI)
+	attUc := usecase.NewAttendanceUsecase(attRepo, userRepo, offlineRepo, cfg, minioClient, faceAI)
 
 	httpHandler := deliveryhttp.NewHandler(authUc, attUc, db, redisClient)
 
@@ -114,6 +115,7 @@ func main() {
 	defaultLimitRouter.HandleFunc("/api/attendance/today", httpHandler.GetTodayAttendance).Methods("GET")
 	defaultLimitRouter.HandleFunc("/api/attendance/history", httpHandler.GetHistory).Methods("GET")
 	defaultLimitRouter.HandleFunc("/api/attendance/sync", httpHandler.SyncAttendance).Methods("POST")
+	defaultLimitRouter.HandleFunc("/api/attendance/sync/status", httpHandler.GetSyncStatus).Methods("GET")
 	defaultLimitRouter.HandleFunc("/api/locations", httpHandler.GetLocations).Methods("GET")
 	defaultLimitRouter.HandleFunc("/api/locations", httpHandler.CreateLocation).Methods("POST")
 	defaultLimitRouter.HandleFunc("/api/locations/{id}", httpHandler.UpdateLocation).Methods("PUT")
@@ -127,11 +129,18 @@ func main() {
 		port = "8080"
 	}
 
+	// Load environment-specific CORS configuration
+	environment := os.Getenv("ENVIRONMENT")
+	if environment == "" {
+		environment = "development"
+	}
+	corsConfig := config.LoadCORSConfig(environment)
+
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"*"},
-		AllowCredentials: true,
+		AllowedOrigins:   corsConfig.AllowedOrigins,
+		AllowedMethods:   corsConfig.AllowedMethods,
+		AllowedHeaders:   corsConfig.AllowedHeaders,
+		AllowCredentials: corsConfig.Credentials,
 	})
 
 	bh := c.Handler(r)

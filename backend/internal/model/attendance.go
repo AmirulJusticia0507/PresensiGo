@@ -124,6 +124,12 @@ type SyncResult struct {
 	Error          string      `json:"error,omitempty"`
 }
 
+type SyncStatusResponse struct {
+	PendingCount int        `json:"pending_count"`
+	StuckCount   int        `json:"stuck_count"`
+	LastSyncAt   *time.Time `json:"last_sync_at,omitempty"`
+}
+
 // CreateLocationRequest contains fields for creating a new location with geofence
 type CreateLocationRequest struct {
 	// Location name, max 255 characters

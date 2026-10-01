@@ -37,6 +37,7 @@ type AttendanceUsecaseIface interface {
 	DeleteLocation(id uuid.UUID) error
 	GetFaceChallenge(userID uuid.UUID) (*model.FaceChallengeResponse, error)
 	Sync(userID uuid.UUID, req *model.SyncRequest) []model.SyncResult
+	GetSyncStatus(userID uuid.UUID) (*model.SyncStatusResponse, error)
 }
 
 // RedisClientIface defines the Redis operations required by the HTTP handler.
@@ -152,6 +153,7 @@ func (h *Handler) RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/api/attendance/today", h.GetTodayAttendance).Methods("GET")
 	r.HandleFunc("/api/attendance/history", h.GetHistory).Methods("GET")
 	r.HandleFunc("/api/attendance/sync", h.SyncAttendance).Methods("POST")
+	r.HandleFunc("/api/attendance/sync/status", h.GetSyncStatus).Methods("GET")
 
 	// Location routes
 	r.HandleFunc("/api/locations", h.GetLocations).Methods("GET")
@@ -268,6 +270,25 @@ func (h *Handler) SyncAttendance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, http.StatusOK, map[string]any{"results": h.attUc.Sync(userID, &req)})
+}
+
+func (h *Handler) GetSyncStatus(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
+	userID := getUserIDFromContext(r)
+	if userID == uuid.Nil {
+		log.Printf("[%s] Unauthorized get-sync-status attempt", requestID)
+		respondError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	status, err := h.attUc.GetSyncStatus(userID)
+	if err != nil {
+		log.Printf("[%s] GetSyncStatus failed for user %s: %v", requestID, userID, err)
+		respondError(w, http.StatusInternalServerError, "failed to get sync status")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, status)
 }
 
 func (h *Handler) GetTodayAttendance(w http.ResponseWriter, r *http.Request) {

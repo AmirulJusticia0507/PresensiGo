@@ -370,6 +370,26 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> getSyncStatus() async {
+    final response = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendanceSync}/status'),
+      headers: await _headers(),
+    );
+
+    if (!await _handleResponse(response)) {
+      return {'success': false, 'message': 'Session expired'};
+    }
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return {'success': true, ...data};
+    }
+    return {
+      'success': false,
+      'message': 'Failed to get sync status',
+    };
+  }
+
   static Future<List<LocationModel>> getLocations() async {
     final response = await http.get(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.locations}'),

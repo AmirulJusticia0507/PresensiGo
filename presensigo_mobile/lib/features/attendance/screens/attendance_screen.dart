@@ -426,6 +426,40 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               ),
                             ),
                     ),
+                    ValueListenableBuilder<int>(
+                      valueListenable:
+                          OfflineQueueService.instance.stuckCount,
+                      builder: (context, count, _) => count == 0
+                          ? const SizedBox.shrink()
+                          : Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Card(
+                                color: AppTheme.errorColor.withValues(alpha: 0.1),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.warning_amber_rounded,
+                                        color: AppTheme.errorColor,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          '$count action(s) failed to sync after multiple retries. Please check your network connection.',
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: AppTheme.errorColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                    ),
                     const SizedBox(height: 20),
                     _buildAttendanceButton(),
                     const SizedBox(height: 20),
