@@ -45,7 +45,9 @@ class BiometricService {
     await prefs.setBool(_biometricLoggedInKey, value);
   }
 
-  static Future<bool> authenticate({String reason = 'Please authenticate to continue'}) async {
+  static Future<bool> authenticate({
+    String reason = 'Please authenticate to continue',
+  }) async {
     try {
       return await _localAuth.authenticate(
         localizedReason: reason,

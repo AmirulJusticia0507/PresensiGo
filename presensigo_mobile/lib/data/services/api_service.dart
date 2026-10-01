@@ -180,6 +180,7 @@ class ApiService {
     required String selfieData,
     required String livenessChallenge,
     required String livenessToken,
+    required String idempotencyKey,
   }) async {
     final uri = Uri.parse(
       '${ApiConstants.baseUrl}${ApiConstants.attendanceCheckIn}',
@@ -193,6 +194,7 @@ class ApiService {
       'selfie_data': selfieData,
       'liveness_challenge': livenessChallenge,
       'liveness_token': livenessToken,
+      'idempotency_key': idempotencyKey,
     });
 
     http.Response? response;
@@ -215,6 +217,7 @@ class ApiService {
     if (response == null) {
       return {
         'success': false,
+        'retryable': true,
         'message': 'Unable to upload selfie. Please try again. ($lastError)',
       };
     }
@@ -230,7 +233,11 @@ class ApiService {
     if (response.statusCode == 200) {
       return {'success': true, 'attendance': AttendanceModel.fromJson(data)};
     }
-    return {'success': false, 'message': data['error'] ?? 'Check-in failed'};
+    return {
+      'success': false,
+      'retryable': response.statusCode >= 500,
+      'message': data['error'] ?? 'Check-in failed',
+    };
   }
 
   static Future<Map<String, dynamic>> getFaceChallenge() async {
@@ -281,18 +288,33 @@ class ApiService {
     required String deviceUuid,
     required int timestamp,
     required String hmacSignature,
+    required String idempotencyKey,
   }) async {
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendanceCheckOut}'),
-      headers: await _headers(),
-      body: jsonEncode({
-        'latitude': latitude,
-        'longitude': longitude,
-        'device_uuid': deviceUuid,
-        'timestamp': timestamp,
-        'hmac_signature': hmacSignature,
-      }),
-    );
+    http.Response response;
+    try {
+      response = await http
+          .post(
+            Uri.parse(
+              '${ApiConstants.baseUrl}${ApiConstants.attendanceCheckOut}',
+            ),
+            headers: await _headers(),
+            body: jsonEncode({
+              'latitude': latitude,
+              'longitude': longitude,
+              'device_uuid': deviceUuid,
+              'timestamp': timestamp,
+              'hmac_signature': hmacSignature,
+              'idempotency_key': idempotencyKey,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      return {
+        'success': false,
+        'retryable': true,
+        'message': 'Network unavailable. Attendance can be queued.',
+      };
+    }
 
     if (!await _handleResponse(response)) {
       return {
@@ -305,7 +327,47 @@ class ApiService {
     if (response.statusCode == 200) {
       return {'success': true, 'attendance': AttendanceModel.fromJson(data)};
     }
-    return {'success': false, 'message': data['error'] ?? 'Check-out failed'};
+    return {
+      'success': false,
+      'retryable': response.statusCode >= 500,
+      'message': data['error'] ?? 'Check-out failed',
+    };
+  }
+
+  static Future<Map<String, dynamic>> syncAttendance(
+    List<Map<String, dynamic>> items,
+  ) async {
+    try {
+      final actions = items
+          .map(
+            (item) => {
+              'idempotency_key': item['idempotency_key'],
+              'action_type': item['action_type'],
+              'payload': item['payload'],
+            },
+          )
+          .toList();
+      final response = await http
+          .post(
+            Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendanceSync}'),
+            headers: await _headers(),
+            body: jsonEncode({'actions': actions}),
+          )
+          .timeout(const Duration(seconds: 60));
+      if (!await _handleResponse(response)) {
+        return {'success': false, 'message': 'Session expired'};
+      }
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return {'success': true, ...data};
+      }
+      return {
+        'success': false,
+        'message': 'Sync failed (${response.statusCode})',
+      };
+    } catch (_) {
+      return {'success': false, 'message': 'Network unavailable'};
+    }
   }
 
   static Future<List<LocationModel>> getLocations() async {

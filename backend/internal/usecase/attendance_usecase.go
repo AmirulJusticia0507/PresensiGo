@@ -40,6 +40,13 @@ func NewAttendanceUsecase(attRepo *repository.AttendanceRepository, userRepo *re
 }
 
 func (u *AttendanceUsecase) CheckIn(userID uuid.UUID, req *model.CheckInRequest) (*model.Attendance, error) {
+	return u.checkIn(userID, req, false)
+}
+
+func (u *AttendanceUsecase) checkIn(userID uuid.UUID, req *model.CheckInRequest, offline bool) (*model.Attendance, error) {
+	if existing, err := u.attRepo.FindByIdempotencyKey(userID, req.IdempotencyKey); err == nil {
+		return existing, nil
+	}
 	// Build payload for HMAC verification
 	payload := map[string]interface{}{
 		"device_uuid": req.DeviceUUID,
@@ -49,7 +56,7 @@ func (u *AttendanceUsecase) CheckIn(userID uuid.UUID, req *model.CheckInRequest)
 	}
 
 	// Verify HMAC with timestamp check (using device UUID as key)
-	if err := auth.VerifyHMACWithTimestamp(payload, req.HMACSig, req.DeviceUUID, req.Timestamp); err != nil {
+	if err := verifyAttendanceProof(payload, req.HMACSig, req.DeviceUUID, req.Timestamp, offline); err != nil {
 		return nil, err
 	}
 
@@ -86,8 +93,12 @@ func (u *AttendanceUsecase) CheckIn(userID uuid.UUID, req *model.CheckInRequest)
 	if req.SelfieData == "" {
 		return nil, errors.New("selfie is required for check-in")
 	}
-	if err := auth.VerifyFaceChallenge(req.LivenessToken, req.LivenessChallenge, userID, u.config.JWT.Secret); err != nil {
-		return nil, err
+	if !offline {
+		if err := auth.VerifyFaceChallenge(req.LivenessToken, req.LivenessChallenge, userID, u.config.JWT.Secret); err != nil {
+			return nil, err
+		}
+	} else if req.LivenessChallenge != "turn_left" && req.LivenessChallenge != "turn_right" {
+		return nil, errors.New("invalid offline liveness challenge")
 	}
 	if len(user.FaceEmbedding) == 0 {
 		return nil, errors.New("face is not enrolled; enroll it from Settings before check-in")
@@ -120,16 +131,17 @@ func (u *AttendanceUsecase) CheckIn(userID uuid.UUID, req *model.CheckInRequest)
 	isLate := now.Hour() >= 9
 
 	att := &model.Attendance{
-		ID:              uuid.New(),
-		UserID:          userID,
-		LocationID:      location.ID,
-		CheckInTime:     &now,
-		CheckInLocation: []float64{req.Latitude, req.Longitude},
-		Status:          "present",
-		IsLate:          isLate,
-		DeviceUUID:      req.DeviceUUID,
-		HMACSignature:   req.HMACSig,
-		Synced:          true,
+		ID:                    uuid.New(),
+		UserID:                userID,
+		LocationID:            location.ID,
+		CheckInTime:           &now,
+		CheckInLocation:       []float64{req.Latitude, req.Longitude},
+		Status:                "present",
+		IsLate:                isLate,
+		DeviceUUID:            req.DeviceUUID,
+		HMACSignature:         req.HMACSig,
+		Synced:                true,
+		CheckInIdempotencyKey: &req.IdempotencyKey,
 	}
 
 	var uploadedObject string
@@ -198,6 +210,13 @@ func decodeSelfie(encoded string) ([]byte, string, string, error) {
 }
 
 func (u *AttendanceUsecase) CheckOut(userID uuid.UUID, req *model.CheckOutRequest) (*model.Attendance, error) {
+	return u.checkOut(userID, req, false)
+}
+
+func (u *AttendanceUsecase) checkOut(userID uuid.UUID, req *model.CheckOutRequest, offline bool) (*model.Attendance, error) {
+	if existing, err := u.attRepo.FindByIdempotencyKey(userID, req.IdempotencyKey); err == nil {
+		return existing, nil
+	}
 	payload := map[string]interface{}{
 		"device_uuid": req.DeviceUUID,
 		"latitude":    fmt.Sprintf("%v", req.Latitude),
@@ -205,7 +224,7 @@ func (u *AttendanceUsecase) CheckOut(userID uuid.UUID, req *model.CheckOutReques
 		"timestamp":   fmt.Sprintf("%d", req.Timestamp),
 	}
 
-	if err := auth.VerifyHMACWithTimestamp(payload, req.HMACSig, req.DeviceUUID, req.Timestamp); err != nil {
+	if err := verifyAttendanceProof(payload, req.HMACSig, req.DeviceUUID, req.Timestamp, offline); err != nil {
 		return nil, err
 	}
 
@@ -224,12 +243,68 @@ func (u *AttendanceUsecase) CheckOut(userID uuid.UUID, req *model.CheckOutReques
 	now := time.Now()
 	att.CheckOutTime = &now
 	att.CheckOutLocation = []float64{req.Latitude, req.Longitude}
+	att.CheckOutIdempotencyKey = &req.IdempotencyKey
 
 	if err := u.attRepo.CreateCheckOut(att); err != nil {
 		return nil, err
 	}
 
 	return att, nil
+}
+
+func verifyAttendanceProof(payload map[string]interface{}, signature, deviceUUID string, timestamp int64, offline bool) error {
+	if !offline {
+		return auth.VerifyHMACWithTimestamp(payload, signature, deviceUUID, timestamp)
+	}
+	age := time.Now().Unix() - timestamp
+	if age < -300 || age > int64((24*time.Hour).Seconds()) {
+		return errors.New("offline action timestamp is outside the 24 hour sync window")
+	}
+	if !auth.VerifyHMAC(payload, signature, deviceUUID) {
+		return errors.New("invalid signature")
+	}
+	return nil
+}
+
+func (u *AttendanceUsecase) Sync(userID uuid.UUID, req *model.SyncRequest) []model.SyncResult {
+	results := make([]model.SyncResult, 0, len(req.Actions))
+	for _, action := range req.Actions {
+		result := model.SyncResult{IdempotencyKey: action.IdempotencyKey}
+		if existing, err := u.attRepo.FindByIdempotencyKey(userID, action.IdempotencyKey); err == nil {
+			result.Status = "duplicate"
+			result.Attendance = existing
+			results = append(results, result)
+			continue
+		}
+
+		var attendance *model.Attendance
+		var err error
+		switch action.ActionType {
+		case "check_in":
+			var payload model.CheckInRequest
+			if err = json.Unmarshal(action.Payload, &payload); err == nil {
+				payload.IdempotencyKey = action.IdempotencyKey
+				attendance, err = u.checkIn(userID, &payload, true)
+			}
+		case "check_out":
+			var payload model.CheckOutRequest
+			if err = json.Unmarshal(action.Payload, &payload); err == nil {
+				payload.IdempotencyKey = action.IdempotencyKey
+				attendance, err = u.checkOut(userID, &payload, true)
+			}
+		default:
+			err = errors.New("unsupported offline action")
+		}
+		if err != nil {
+			result.Status = "failed"
+			result.Error = err.Error()
+		} else {
+			result.Status = "synced"
+			result.Attendance = attendance
+		}
+		results = append(results, result)
+	}
+	return results
 }
 
 func (u *AttendanceUsecase) GetHistory(userID uuid.UUID, limit, offset int) ([]model.AttendanceResponse, error) {

@@ -6,11 +6,13 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/location_service.dart';
 import '../../../core/utils/crypto_helper.dart';
 import '../../../data/services/api_service.dart';
+import '../../../data/services/offline_queue_service.dart';
 import '../../history/screens/history_screen.dart';
 import '../../settings/screens/settings_screen.dart';
 import '../../geofencing/screens/geofencing_screen.dart';
@@ -57,7 +59,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Future<void> _checkTodayAttendance() async {
     final attendance = await ApiService.getTodayAttendance();
-    if (attendance != null && attendance.checkOutTime == null) {
+    final queue = OfflineQueueService.instance;
+    if (queue.hasPending('check_out')) {
+      setState(() => _isCheckedIn = false);
+    } else if (queue.hasPending('check_in') ||
+        (attendance != null && attendance.checkOutTime == null)) {
       setState(() => _isCheckedIn = true);
     }
   }
@@ -72,12 +78,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     if (confirmedPosition == null) return; // User cancelled
 
     final challenge = await ApiService.getFaceChallenge();
-    if (challenge['success'] != true) {
-      _showError(challenge['message'] as String);
-      return;
-    }
     if (!mounted) return;
-    final challengeName = challenge['challenge'] as String;
+    final onlineChallenge = challenge['success'] == true;
+    final challengeName = onlineChallenge
+        ? challenge['challenge'] as String
+        : (DateTime.now().millisecond.isEven ? 'turn_left' : 'turn_right');
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -109,6 +114,31 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     };
 
     final hmac = CryptoHelper.generateHMAC(payload, _deviceUuid);
+    final idempotencyKey = const Uuid().v4();
+    final requestPayload = <String, dynamic>{
+      'latitude': confirmedPosition.latitude,
+      'longitude': confirmedPosition.longitude,
+      'device_uuid': _deviceUuid,
+      'timestamp': timestamp,
+      'hmac_signature': hmac,
+      'selfie_data': selfieData,
+      'liveness_challenge': challengeName,
+      'liveness_token': onlineChallenge ? challenge['token'] as String : '',
+      'idempotency_key': idempotencyKey,
+    };
+
+    if (!onlineChallenge) {
+      await OfflineQueueService.instance.enqueue(
+        'check_in',
+        requestPayload,
+        idempotencyKey: idempotencyKey,
+      );
+      if (!mounted) return;
+      setState(() => _isProcessing = false);
+      setState(() => _isCheckedIn = true);
+      _showSuccess('Check-in saved offline and will sync automatically.');
+      return;
+    }
 
     final result = await ApiService.checkIn(
       latitude: confirmedPosition.latitude,
@@ -119,6 +149,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       selfieData: selfieData,
       livenessChallenge: challengeName,
       livenessToken: challenge['token'] as String,
+      idempotencyKey: idempotencyKey,
     );
 
     setState(() => _isProcessing = false);
@@ -126,6 +157,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     if (result['success'] == true) {
       setState(() => _isCheckedIn = true);
       _showSuccess('Check-in successful! Have a great day.');
+    } else if (result['retryable'] == true) {
+      await OfflineQueueService.instance.enqueue(
+        'check_in',
+        requestPayload,
+        idempotencyKey: idempotencyKey,
+      );
+      if (mounted) setState(() => _isCheckedIn = true);
+      _showSuccess('Check-in saved offline and will sync automatically.');
     } else {
       _showError(result['message']);
     }
@@ -215,6 +254,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     };
 
     final hmac = CryptoHelper.generateHMAC(payload, _deviceUuid);
+    final idempotencyKey = const Uuid().v4();
+    final requestPayload = <String, dynamic>{
+      'latitude': _currentPosition!.latitude,
+      'longitude': _currentPosition!.longitude,
+      'device_uuid': _deviceUuid,
+      'timestamp': timestamp,
+      'hmac_signature': hmac,
+      'idempotency_key': idempotencyKey,
+    };
 
     final result = await ApiService.checkOut(
       latitude: _currentPosition!.latitude,
@@ -222,6 +270,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       deviceUuid: _deviceUuid,
       timestamp: timestamp,
       hmacSignature: hmac,
+      idempotencyKey: idempotencyKey,
     );
 
     setState(() => _isProcessing = false);
@@ -229,6 +278,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     if (result['success'] == true) {
       setState(() => _isCheckedIn = false);
       _showSuccess('Check-out successful! See you tomorrow.');
+    } else if (result['retryable'] == true) {
+      await OfflineQueueService.instance.enqueue(
+        'check_out',
+        requestPayload,
+        idempotencyKey: idempotencyKey,
+      );
+      if (mounted) setState(() => _isCheckedIn = false);
+      _showSuccess('Check-out saved offline and will sync automatically.');
     } else {
       _showError(result['message']);
     }
@@ -351,6 +408,24 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 child: Column(
                   children: [
                     _buildLocationCard(),
+                    ValueListenableBuilder<int>(
+                      valueListenable:
+                          OfflineQueueService.instance.pendingCount,
+                      builder: (context, count, _) => count == 0
+                          ? const SizedBox.shrink()
+                          : Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: Chip(
+                                avatar: const Icon(
+                                  Icons.cloud_upload_outlined,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  '$count attendance action(s) waiting to sync',
+                                ),
+                              ),
+                            ),
+                    ),
                     const SizedBox(height: 20),
                     _buildAttendanceButton(),
                     const SizedBox(height: 20),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../../data/services/session_manager.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -64,11 +65,10 @@ class _SplashScreenState extends State<SplashScreen> {
             // App logo or splash image
             const Icon(Icons.badge, size: 80, color: Colors.blue),
             const SizedBox(height: 24),
-            const Text('PresensiGo',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                )),
+            const Text(
+              'PresensiGo',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 24),
             const CircularProgressIndicator(),
             const SizedBox(height: 16),

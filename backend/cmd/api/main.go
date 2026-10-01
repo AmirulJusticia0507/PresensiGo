@@ -113,6 +113,7 @@ func main() {
 	defaultLimitRouter.Use(rateLimiter.RateLimitMiddleware("default"))
 	defaultLimitRouter.HandleFunc("/api/attendance/today", httpHandler.GetTodayAttendance).Methods("GET")
 	defaultLimitRouter.HandleFunc("/api/attendance/history", httpHandler.GetHistory).Methods("GET")
+	defaultLimitRouter.HandleFunc("/api/attendance/sync", httpHandler.SyncAttendance).Methods("POST")
 	defaultLimitRouter.HandleFunc("/api/locations", httpHandler.GetLocations).Methods("GET")
 	defaultLimitRouter.HandleFunc("/api/locations", httpHandler.CreateLocation).Methods("POST")
 	defaultLimitRouter.HandleFunc("/api/locations/{id}", httpHandler.UpdateLocation).Methods("PUT")

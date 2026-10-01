@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/biometric_service.dart';
 import '../../../data/services/session_manager.dart';
@@ -75,7 +76,8 @@ class _BiometricUnlockScreenState extends State<BiometricUnlockScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                    'Biometric failed. Retries: $_retryCount/$_maxRetries'),
+                  'Biometric failed. Retries: $_retryCount/$_maxRetries',
+                ),
                 duration: const Duration(seconds: 2),
               ),
             );
@@ -118,7 +120,8 @@ class _BiometricUnlockScreenState extends State<BiometricUnlockScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Biometric Error'),
         content: const Text(
-            'Biometric authentication failed. Please use password login.'),
+          'Biometric authentication failed. Please use password login.',
+        ),
         actions: [
           TextButton(
             onPressed: () {
@@ -161,30 +164,21 @@ class _BiometricUnlockScreenState extends State<BiometricUnlockScreen> {
             const SizedBox(height: 32),
             Text(
               'Unlocking with $_biometricName',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
             if (_isAuthenticating) ...[
               const SizedBox(height: 8),
               const Text(
                 'Authenticating...',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 24),
               const CircularProgressIndicator(),
             ] else ...[
               Text(
                 'Attempt $_retryCount of $_maxRetries',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
               const SizedBox(height: 32),
               ElevatedButton.icon(

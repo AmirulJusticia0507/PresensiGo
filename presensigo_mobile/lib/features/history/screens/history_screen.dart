@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../core/theme/app_theme.dart';
 import '../../../data/services/api_service.dart';
 import '../../../data/models/attendance_model.dart';
@@ -46,7 +47,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
               color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.arrow_back_ios_new, size: 18, color: AppTheme.primaryColor),
+            child: const Icon(
+              Icons.arrow_back_ios_new,
+              size: 18,
+              color: AppTheme.primaryColor,
+            ),
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -54,19 +59,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _history.isEmpty
-              ? _buildEmptyState()
-              : RefreshIndicator(
-                  onRefresh: _loadHistory,
-                  color: AppTheme.primaryColor,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(20),
-                    itemCount: _history.length,
-                    itemBuilder: (context, index) {
-                      final attendance = _history[index];
-                      return _buildAttendanceCard(attendance, index);
-                    },
-                  ),
-                ),
+          ? _buildEmptyState()
+          : RefreshIndicator(
+              onRefresh: _loadHistory,
+              color: AppTheme.primaryColor,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(20),
+                itemCount: _history.length,
+                itemBuilder: (context, index) {
+                  final attendance = _history[index];
+                  return _buildAttendanceCard(attendance, index);
+                },
+              ),
+            ),
     );
   }
 
@@ -167,7 +172,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              dateFormat.format(attendance.checkInTime ?? DateTime.now()),
+                              dateFormat.format(
+                                attendance.checkInTime ?? DateTime.now(),
+                              ),
                               style: TextStyle(
                                 fontSize: 13,
                                 color: AppTheme.textSecondary,
@@ -180,7 +187,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: attendance.status == 'present'
                         ? AppTheme.secondaryColor.withValues(alpha: 0.1)
@@ -252,10 +262,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             children: [
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: AppTheme.textMuted,
-                ),
+                style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
               ),
               Text(
                 time,

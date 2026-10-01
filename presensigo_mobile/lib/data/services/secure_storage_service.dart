@@ -4,6 +4,7 @@ class SecureStorageService {
   static const _tokenKey = 'jwt_token';
   static const _deviceIdKey = 'device_uuid';
   static const _biometricKey = 'biometric_enabled';
+  static const _offlineQueueKey = 'offline_queue_key';
 
   late final FlutterSecureStorage _storage;
 
@@ -96,4 +97,9 @@ class SecureStorageService {
       throw Exception('Failed to clear credentials: $e');
     }
   }
+
+  Future<String?> getOfflineQueueKey() => _storage.read(key: _offlineQueueKey);
+
+  Future<void> saveOfflineQueueKey(String value) =>
+      _storage.write(key: _offlineQueueKey, value: value);
 }

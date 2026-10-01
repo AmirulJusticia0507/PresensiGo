@@ -4,6 +4,9 @@ import (
 	"encoding/base64"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/PresensiGo/backend/internal/auth"
 )
 
 func TestDecodeSelfie(t *testing.T) {
@@ -14,6 +17,25 @@ func TestDecodeSelfie(t *testing.T) {
 	}
 	if string(data) != string(jpeg) || contentType != "image/jpeg" || extension != "jpg" {
 		t.Fatalf("unexpected decoded selfie: %v, %q, %q", data, contentType, extension)
+	}
+}
+
+func TestVerifyOfflineAttendanceProof(t *testing.T) {
+	timestamp := time.Now().Add(-time.Hour).Unix()
+	payload := map[string]interface{}{
+		"device_uuid": "device-id", "latitude": "-6.2",
+		"longitude": "106.8", "timestamp": timestamp,
+	}
+	signature := auth.GenerateHMAC(payload, "device-id")
+	if err := verifyAttendanceProof(payload, signature, "device-id", timestamp, true); err != nil {
+		t.Fatalf("valid offline proof rejected: %v", err)
+	}
+	if err := verifyAttendanceProof(payload, "invalid", "device-id", timestamp, true); err == nil {
+		t.Fatal("invalid offline signature accepted")
+	}
+	stale := time.Now().Add(-25 * time.Hour).Unix()
+	if err := verifyAttendanceProof(payload, signature, "device-id", stale, true); err == nil {
+		t.Fatal("stale offline action accepted")
 	}
 }
 

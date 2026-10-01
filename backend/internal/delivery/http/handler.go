@@ -36,6 +36,7 @@ type AttendanceUsecaseIface interface {
 	UpdateLocation(id uuid.UUID, req *model.Location) error
 	DeleteLocation(id uuid.UUID) error
 	GetFaceChallenge(userID uuid.UUID) (*model.FaceChallengeResponse, error)
+	Sync(userID uuid.UUID, req *model.SyncRequest) []model.SyncResult
 }
 
 // RedisClientIface defines the Redis operations required by the HTTP handler.
@@ -116,7 +117,8 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 
 // HealthReady returns readiness check - verifies Redis and database connectivity
 func (h *Handler) HealthReady(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Health readiness check request from %s", r.RemoteAddr)
+	requestID := middleware.GetRequestID(r.Context())
+	log.Printf("[%s] Health readiness check request from %s", requestID, r.RemoteAddr)
 
 	// Check database connectivity
 	dbOK := h.db.Ping() == nil
@@ -129,11 +131,11 @@ func (h *Handler) HealthReady(w http.ResponseWriter, r *http.Request) {
 	ready := dbOK && redisOK
 
 	if ready {
-		log.Printf("Health readiness: OK (DB: %v, Redis: %v)", dbOK, redisOK)
+		log.Printf("[%s] Health readiness: OK (DB: %v, Redis: %v)", requestID, dbOK, redisOK)
 		respondJSON(w, http.StatusOK, map[string]bool{"ready": true})
 	} else {
 		// Return 503 Service Unavailable if not ready
-		log.Printf("Health readiness: NOT READY (DB: %v, Redis: %v)", dbOK, redisOK)
+		log.Printf("[%s] Health readiness: NOT READY (DB: %v, Redis: %v)", requestID, dbOK, redisOK)
 		w.WriteHeader(http.StatusServiceUnavailable)
 		respondJSON(w, http.StatusServiceUnavailable, map[string]bool{"ready": false})
 	}
@@ -149,6 +151,7 @@ func (h *Handler) RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/api/attendance/check-out", h.CheckOut).Methods("POST")
 	r.HandleFunc("/api/attendance/today", h.GetTodayAttendance).Methods("GET")
 	r.HandleFunc("/api/attendance/history", h.GetHistory).Methods("GET")
+	r.HandleFunc("/api/attendance/sync", h.SyncAttendance).Methods("POST")
 
 	// Location routes
 	r.HandleFunc("/api/locations", h.GetLocations).Methods("GET")
@@ -171,11 +174,12 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.authUc.Register(&req)
 	if err != nil {
-		log.Printf("[%s] Registration failed: %v", requestID, err)
+		log.Printf("[%s] Registration failed for email %s: %v", requestID, req.Email, err)
 		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Printf("[%s] Registration successful for user %s", requestID, user.ID)
 	respondJSON(w, http.StatusCreated, map[string]interface{}{
 		"message": "registration successful",
 		"user":    user,
@@ -183,6 +187,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
 	var req model.LoginRequest
 	if err := validateRequest(w, r, &req); err != nil {
 		return
@@ -190,19 +195,19 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.authUc.Login(&req)
 	if err != nil {
-		requestID := middleware.GetRequestID(r.Context())
 		log.Printf("[%s] Login failed: invalid credentials for email %s", requestID, req.Email)
 		respondError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
 
+	log.Printf("[%s] Login successful for user %s", requestID, resp.User.ID)
 	respondJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) CheckIn(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
 	userID := getUserIDFromContext(r)
 	if userID == uuid.Nil {
-		requestID := middleware.GetRequestID(r.Context())
 		log.Printf("[%s] Unauthorized check-in attempt", requestID)
 		respondError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -217,18 +222,20 @@ func (h *Handler) CheckIn(w http.ResponseWriter, r *http.Request) {
 
 	att, err := h.attUc.CheckIn(userID, &req)
 	if err != nil {
-		requestID := middleware.GetRequestID(r.Context())
 		log.Printf("[%s] Check-in failed for user %s: %v", requestID, userID, err)
 		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Printf("[%s] Check-in successful for user %s at location", requestID, userID)
 	respondJSON(w, http.StatusOK, att)
 }
 
 func (h *Handler) CheckOut(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
 	userID := getUserIDFromContext(r)
 	if userID == uuid.Nil {
+		log.Printf("[%s] Unauthorized check-out attempt", requestID)
 		respondError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
@@ -240,22 +247,41 @@ func (h *Handler) CheckOut(w http.ResponseWriter, r *http.Request) {
 
 	att, err := h.attUc.CheckOut(userID, &req)
 	if err != nil {
+		log.Printf("[%s] Check-out failed for user %s: %v", requestID, userID, err)
 		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Printf("[%s] Check-out successful for user %s", requestID, userID)
 	respondJSON(w, http.StatusOK, att)
 }
 
-func (h *Handler) GetTodayAttendance(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SyncAttendance(w http.ResponseWriter, r *http.Request) {
 	userID := getUserIDFromContext(r)
 	if userID == uuid.Nil {
+		respondError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 25<<20)
+	var req model.SyncRequest
+	if err := validateRequest(w, r, &req); err != nil {
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]any{"results": h.attUc.Sync(userID, &req)})
+}
+
+func (h *Handler) GetTodayAttendance(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
+	userID := getUserIDFromContext(r)
+	if userID == uuid.Nil {
+		log.Printf("[%s] Unauthorized get-today-attendance attempt", requestID)
 		respondError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	att, err := h.attUc.GetTodayAttendance(userID)
 	if err != nil {
+		log.Printf("[%s] GetTodayAttendance failed for user %s: %v", requestID, userID, err)
 		respondError(w, http.StatusNotFound, "no attendance record today")
 		return
 	}
@@ -264,8 +290,10 @@ func (h *Handler) GetTodayAttendance(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetHistory(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
 	userID := getUserIDFromContext(r)
 	if userID == uuid.Nil {
+		log.Printf("[%s] Unauthorized get-history attempt", requestID)
 		respondError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
@@ -275,6 +303,7 @@ func (h *Handler) GetHistory(w http.ResponseWriter, r *http.Request) {
 
 	history, err := h.attUc.GetHistory(userID, limit, offset)
 	if err != nil {
+		log.Printf("[%s] GetHistory failed for user %s: %v", requestID, userID, err)
 		respondError(w, http.StatusInternalServerError, "failed to get history")
 		return
 	}
@@ -283,8 +312,10 @@ func (h *Handler) GetHistory(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetLocations(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
 	locations, err := h.attUc.GetLocations()
 	if err != nil {
+		log.Printf("[%s] GetLocations failed: %v", requestID, err)
 		respondError(w, http.StatusInternalServerError, "failed to get locations")
 		return
 	}
@@ -293,14 +324,17 @@ func (h *Handler) GetLocations(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
 	userID := getUserIDFromContext(r)
 	if userID == uuid.Nil {
+		log.Printf("[%s] Unauthorized get-profile attempt", requestID)
 		respondError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	user, err := h.authUc.GetByID(userID)
 	if err != nil {
+		log.Printf("[%s] GetProfile failed for user %s: %v", requestID, userID, err)
 		respondError(w, http.StatusNotFound, "user not found")
 		return
 	}
@@ -318,8 +352,10 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) EnrollFace(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
 	userID := getUserIDFromContext(r)
 	if userID == uuid.Nil {
+		log.Printf("[%s] Unauthorized face-enrollment attempt", requestID)
 		respondError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
@@ -329,20 +365,25 @@ func (h *Handler) EnrollFace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.authUc.EnrollFace(r.Context(), userID, req.Selfies); err != nil {
+		log.Printf("[%s] Face enrollment failed for user %s: %v", requestID, userID, err)
 		respondError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
+	log.Printf("[%s] Face enrollment successful for user %s with %d samples", requestID, userID, len(req.Selfies))
 	respondJSON(w, http.StatusOK, map[string]any{"message": "face enrollment completed", "samples": len(req.Selfies)})
 }
 
 func (h *Handler) GetFaceChallenge(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
 	userID := getUserIDFromContext(r)
 	if userID == uuid.Nil {
+		log.Printf("[%s] Unauthorized face-challenge attempt", requestID)
 		respondError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 	challenge, err := h.attUc.GetFaceChallenge(userID)
 	if err != nil {
+		log.Printf("[%s] GetFaceChallenge failed for user %s: %v", requestID, userID, err)
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -350,33 +391,41 @@ func (h *Handler) GetFaceChallenge(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateFaceEmbedding(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
 	userID := getUserIDFromContext(r)
 	if userID == uuid.Nil {
+		log.Printf("[%s] Unauthorized update-face-embedding attempt", requestID)
 		respondError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	var req model.UpdateFaceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("[%s] Failed to decode update-face-embedding request: %v", requestID, err)
 		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.authUc.UpdateFaceEmbedding(userID, req.FaceEmbedding); err != nil {
+		log.Printf("[%s] UpdateFaceEmbedding failed for user %s: %v", requestID, userID, err)
 		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Printf("[%s] Face embedding updated successfully for user %s", requestID, userID)
 	respondJSON(w, http.StatusOK, map[string]string{"message": "face embedding updated"})
 }
 
 func (h *Handler) CreateLocation(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
 	if !requireAdmin(w, r) {
+		log.Printf("[%s] Unauthorized location-creation attempt (non-admin user)", requestID)
 		return
 	}
 
 	var req model.Location
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("[%s] Failed to decode create-location request: %v", requestID, err)
 		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -385,57 +434,70 @@ func (h *Handler) CreateLocation(w http.ResponseWriter, r *http.Request) {
 	req.ID = uuid.New()
 
 	if err := h.attUc.CreateLocation(&req); err != nil {
+		log.Printf("[%s] CreateLocation failed: %v", requestID, err)
 		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Printf("[%s] Location created successfully with ID %s", requestID, req.ID)
 	respondJSON(w, http.StatusCreated, req)
 }
 
 func (h *Handler) UpdateLocation(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
 	if !requireAdmin(w, r) {
+		log.Printf("[%s] Unauthorized location-update attempt (non-admin user)", requestID)
 		return
 	}
 
 	vars := mux.Vars(r)
 	id, err := uuid.Parse(vars["id"])
 	if err != nil {
+		log.Printf("[%s] Failed to parse location ID: %v", requestID, err)
 		respondError(w, http.StatusBadRequest, "invalid location ID")
 		return
 	}
 
 	var req model.Location
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("[%s] Failed to decode update-location request: %v", requestID, err)
 		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.attUc.UpdateLocation(id, &req); err != nil {
+		log.Printf("[%s] UpdateLocation failed for ID %s: %v", requestID, id, err)
 		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Printf("[%s] Location updated successfully with ID %s", requestID, id)
 	respondJSON(w, http.StatusOK, req)
 }
 
 func (h *Handler) DeleteLocation(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
 	if !requireAdmin(w, r) {
+		log.Printf("[%s] Unauthorized location-deletion attempt (non-admin user)", requestID)
 		return
 	}
 
 	vars := mux.Vars(r)
 	id, err := uuid.Parse(vars["id"])
 	if err != nil {
+		log.Printf("[%s] Failed to parse location ID: %v", requestID, err)
 		respondError(w, http.StatusBadRequest, "invalid location ID")
 		return
 	}
 
 	err = h.attUc.DeleteLocation(id)
 	if err != nil {
+		log.Printf("[%s] DeleteLocation failed for ID %s: %v", requestID, id, err)
 		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Printf("[%s] Location deleted successfully with ID %s", requestID, id)
 	respondJSON(w, http.StatusOK, map[string]string{"message": "location deleted"})
 }
 
@@ -459,8 +521,10 @@ func getUserIDFromContext(r *http.Request) uuid.UUID {
 }
 
 func requireAdmin(w http.ResponseWriter, r *http.Request) bool {
+	requestID := middleware.GetRequestID(r.Context())
 	role := middleware.GetRoleFromContext(r.Context())
 	if role != "admin" {
+		log.Printf("[%s] Authorization failed: admin role required", requestID)
 		respondError(w, http.StatusForbidden, "admin role required")
 		return false
 	}

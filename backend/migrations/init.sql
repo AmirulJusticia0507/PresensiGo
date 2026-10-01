@@ -49,6 +49,8 @@ CREATE TABLE attendances (
     device_uuid VARCHAR(255),
     hmac_signature VARCHAR(255),
     synced BOOLEAN DEFAULT TRUE,
+    check_in_idempotency_key UUID UNIQUE,
+    check_out_idempotency_key UUID UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

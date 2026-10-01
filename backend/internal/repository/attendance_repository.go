@@ -53,15 +53,15 @@ func (r *AttendanceRepository) CreateCheckIn(att *model.Attendance) error {
 	query := `
 		INSERT INTO attendances (
 			id, user_id, location_id, check_in_time, check_in_location,
-			selfie_url, status, is_late, device_uuid, hmac_signature, synced
-		) VALUES ($1, $2, $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326), $7, $8, $9, $10, $11, $12)
+			selfie_url, status, is_late, device_uuid, hmac_signature, synced, check_in_idempotency_key
+		) VALUES ($1, $2, $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326), $7, $8, $9, $10, $11, $12, $13)
 		RETURNING created_at, updated_at`
 
 	return r.db.QueryRow(query,
 		att.ID, att.UserID, att.LocationID, att.CheckInTime,
 		att.CheckInLocation[1], att.CheckInLocation[0], // lat, lng reversed for PostGIS
 		att.SelfieURL, att.Status, att.IsLate,
-		att.DeviceUUID, att.HMACSignature, att.Synced,
+		att.DeviceUUID, att.HMACSignature, att.Synced, att.CheckInIdempotencyKey,
 	).Scan(&att.CreatedAt, &att.UpdatedAt)
 }
 
@@ -70,15 +70,31 @@ func (r *AttendanceRepository) CreateCheckOut(att *model.Attendance) error {
 		UPDATE attendances 
 		SET check_out_time = $1, 
 			check_out_location = ST_SetSRID(ST_MakePoint($2, $3), 4326),
+			check_out_idempotency_key = $4,
 			updated_at = NOW()
-		WHERE id = $4
+		WHERE id = $5
 		RETURNING updated_at`
 
 	return r.db.QueryRow(query,
 		att.CheckOutTime,
 		att.CheckOutLocation[1], att.CheckOutLocation[0],
-		att.ID,
+		att.CheckOutIdempotencyKey, att.ID,
 	).Scan(&att.UpdatedAt)
+}
+
+func (r *AttendanceRepository) FindByIdempotencyKey(userID, key uuid.UUID) (*model.Attendance, error) {
+	att := &model.Attendance{}
+	err := r.db.QueryRow(`
+		SELECT id, user_id, location_id, check_in_time, check_out_time,
+			selfie_url, status, is_late, device_uuid, hmac_signature, synced, created_at, updated_at
+		FROM attendances
+		WHERE user_id = $1 AND (check_in_idempotency_key = $2 OR check_out_idempotency_key = $2)
+		LIMIT 1`, userID, key).Scan(
+		&att.ID, &att.UserID, &att.LocationID, &att.CheckInTime, &att.CheckOutTime,
+		&att.SelfieURL, &att.Status, &att.IsLate, &att.DeviceUUID, &att.HMACSignature,
+		&att.Synced, &att.CreatedAt, &att.UpdatedAt,
+	)
+	return att, err
 }
 
 func (r *AttendanceRepository) FindTodayByUser(userID uuid.UUID) (*model.Attendance, error) {

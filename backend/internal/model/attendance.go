@@ -1,29 +1,31 @@
 package model
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 )
 
 type Attendance struct {
-	ID               uuid.UUID  `json:"id" db:"id"`
-	UserID           uuid.UUID  `json:"user_id" db:"user_id"`
-	LocationID       uuid.UUID  `json:"location_id" db:"location_id"`
-	CheckInTime      *time.Time `json:"check_in_time,omitempty" db:"check_in_time"`
-	CheckOutTime     *time.Time `json:"check_out_time,omitempty" db:"check_out_time"`
-	CheckInLocation  []float64  `json:"check_in_location,omitempty" db:"check_in_location"`
-	CheckOutLocation []float64  `json:"check_out_location,omitempty" db:"check_out_location"`
-	SelfieURL        *string    `json:"selfie_url,omitempty" db:"selfie_url"`
-	Status           string     `json:"status" db:"status"`
-	IsLate           bool       `json:"is_late" db:"is_late"`
-	Notes            *string    `json:"notes,omitempty" db:"notes"`
-	DeviceUUID       string     `json:"device_uuid" db:"device_uuid"`
-	HMACSignature    string     `json:"hmac_signature" db:"hmac_signature"`
-	Synced           bool       `json:"synced" db:"synced"`
-	CreatedAt        time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt        time.Time  `json:"updated_at" db:"updated_at"`
+	ID                     uuid.UUID  `json:"id" db:"id"`
+	UserID                 uuid.UUID  `json:"user_id" db:"user_id"`
+	LocationID             uuid.UUID  `json:"location_id" db:"location_id"`
+	CheckInTime            *time.Time `json:"check_in_time,omitempty" db:"check_in_time"`
+	CheckOutTime           *time.Time `json:"check_out_time,omitempty" db:"check_out_time"`
+	CheckInLocation        []float64  `json:"check_in_location,omitempty" db:"check_in_location"`
+	CheckOutLocation       []float64  `json:"check_out_location,omitempty" db:"check_out_location"`
+	SelfieURL              *string    `json:"selfie_url,omitempty" db:"selfie_url"`
+	Status                 string     `json:"status" db:"status"`
+	IsLate                 bool       `json:"is_late" db:"is_late"`
+	Notes                  *string    `json:"notes,omitempty" db:"notes"`
+	DeviceUUID             string     `json:"device_uuid" db:"device_uuid"`
+	HMACSignature          string     `json:"hmac_signature" db:"hmac_signature"`
+	Synced                 bool       `json:"synced" db:"synced"`
+	CreatedAt              time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt              time.Time  `json:"updated_at" db:"updated_at"`
+	CheckInIdempotencyKey  *uuid.UUID `json:"check_in_idempotency_key,omitempty" db:"check_in_idempotency_key"`
+	CheckOutIdempotencyKey *uuid.UUID `json:"check_out_idempotency_key,omitempty" db:"check_out_idempotency_key"`
 }
 
 type Location struct {
@@ -51,8 +53,9 @@ type CheckInRequest struct {
 	// Optional base64-encoded selfie image data
 	SelfieData string `json:"selfie_data"`
 	// Short-lived signed challenge issued by the backend.
-	LivenessChallenge string `json:"liveness_challenge" validate:"required"`
-	LivenessToken     string `json:"liveness_token" validate:"required"`
+	LivenessChallenge string    `json:"liveness_challenge" validate:"required"`
+	LivenessToken     string    `json:"liveness_token" validate:"required"`
+	IdempotencyKey    uuid.UUID `json:"idempotency_key" validate:"required"`
 }
 
 type FaceChallengeResponse struct {
@@ -71,7 +74,8 @@ type CheckOutRequest struct {
 	// Timestamp in seconds since epoch
 	Timestamp int64 `json:"timestamp" validate:"required"`
 	// HMAC signature for request authentication
-	HMACSig string `json:"hmac_signature" validate:"required"`
+	HMACSig        string    `json:"hmac_signature" validate:"required"`
+	IdempotencyKey uuid.UUID `json:"idempotency_key" validate:"required"`
 }
 
 type AttendanceResponse struct {
@@ -103,10 +107,21 @@ type OfflinePayload struct {
 	CreatedAt       time.Time `json:"created_at"`
 }
 
+type SyncAction struct {
+	IdempotencyKey uuid.UUID       `json:"idempotency_key" validate:"required"`
+	ActionType     string          `json:"action_type" validate:"required,oneof=check_in check_out"`
+	Payload        json.RawMessage `json:"payload" validate:"required"`
+}
+
 type SyncRequest struct {
-	Payloads       []OfflinePayload `json:"payloads" validate:"required"`
-	DeviceUUID     string           `json:"device_uuid" validate:"required"`
-	HMACSignatures pq.StringArray   `json:"hmac_signatures" validate:"required"`
+	Actions []SyncAction `json:"actions" validate:"required,min=1,max=20,dive"`
+}
+
+type SyncResult struct {
+	IdempotencyKey uuid.UUID   `json:"idempotency_key"`
+	Status         string      `json:"status"`
+	Attendance     *Attendance `json:"attendance,omitempty"`
+	Error          string      `json:"error,omitempty"`
 }
 
 // CreateLocationRequest contains fields for creating a new location with geofence

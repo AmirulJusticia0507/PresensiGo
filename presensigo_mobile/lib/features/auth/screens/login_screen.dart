@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/biometric_service.dart';
 import '../../../data/services/api_service.dart';
@@ -13,7 +14,8 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -32,9 +34,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     _controller.forward();
     _loadBiometricStatus();
   }
@@ -118,7 +121,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             ),
             backgroundColor: AppTheme.errorColor,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -171,18 +176,18 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     // Title
                     Text(
                       'PresensiGo',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary,
-                        letterSpacing: -1,
-                      ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textPrimary,
+                            letterSpacing: -1,
+                          ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Smart Attendance System',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
+                      style: Theme.of(context).textTheme.bodyLarge
+                          ?.copyWith(color: AppTheme.textSecondary),
                     ),
                     const SizedBox(height: 48),
 
@@ -202,10 +207,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           children: [
                             Text(
                               'Welcome back',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.textPrimary,
-                              ),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textPrimary,
+                                  ),
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -229,7 +235,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               keyboardType: TextInputType.emailAddress,
                               decoration: InputDecoration(
                                 hintText: 'you@example.com',
-                                prefixIcon: const Icon(Icons.mail_outline, size: 20),
+                                prefixIcon: const Icon(
+                                  Icons.mail_outline,
+                                  size: 20,
+                                ),
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -258,7 +267,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               obscureText: _obscurePassword,
                               decoration: InputDecoration(
                                 hintText: 'Enter your password',
-                                prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                                prefixIcon: const Icon(
+                                  Icons.lock_outline,
+                                  size: 20,
+                                ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword
@@ -268,7 +280,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                     color: AppTheme.textMuted,
                                   ),
                                   onPressed: () {
-                                    setState(() => _obscurePassword = !_obscurePassword);
+                                    setState(
+                                      () =>
+                                          _obscurePassword = !_obscurePassword,
+                                    );
                                   },
                                 ),
                               ),
@@ -289,7 +304,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 onPressed: _isLoading ? null : _login,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppTheme.primaryColor,
-                                  disabledBackgroundColor: AppTheme.primaryColor.withValues(alpha: 0.5),
+                                  disabledBackgroundColor: AppTheme.primaryColor
+                                      .withValues(alpha: 0.5),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -305,7 +321,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                         ),
                                       )
                                     : const Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Text(
                                             'Sign In',
@@ -316,7 +333,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                             ),
                                           ),
                                           SizedBox(width: 8),
-                                          Icon(Icons.arrow_forward, size: 20, color: Colors.white),
+                                          Icon(
+                                            Icons.arrow_forward,
+                                            size: 20,
+                                            color: Colors.white,
+                                          ),
                                         ],
                                       ),
                               ),
@@ -331,13 +352,17 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 child: OutlinedButton.icon(
                                   onPressed: _biometricLogin,
                                   icon: Icon(
-                                    _biometricName == 'Face ID' ? Icons.face_rounded : Icons.fingerprint,
+                                    _biometricName == 'Face ID'
+                                        ? Icons.face_rounded
+                                        : Icons.fingerprint,
                                     size: 24,
                                   ),
                                   label: Text('Login with $_biometricName'),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: AppTheme.primaryColor,
-                                    side: const BorderSide(color: AppTheme.primaryColor),
+                                    side: const BorderSide(
+                                      color: AppTheme.primaryColor,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
@@ -355,10 +380,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     // Footer
                     Text(
                       'PresensiGo v1.0.0',
-                      style: TextStyle(
-                        color: AppTheme.textMuted,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
                     ),
                   ],
                 ),

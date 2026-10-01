@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   // Modern color palette (Tailwind-inspired)
-  static const Color primaryColor = Color(0xFF3B82F6);      // blue-500
-  static const Color primaryDark = Color(0xFF1D4ED8);        // blue-700
-  static const Color primaryLight = Color(0xFF93C5FD);       // blue-300
-  static const Color secondaryColor = Color(0xFF10B981);     // emerald-500
-  static const Color secondaryDark = Color(0xFF059669);      // emerald-600
-  static const Color errorColor = Color(0xFFEF4444);         // red-500
-  static const Color warningColor = Color(0xFFF59E0B);       // amber-500
-  static const Color backgroundColor = Color(0xFFF8FAFC);    // slate-50
+  static const Color primaryColor = Color(0xFF3B82F6); // blue-500
+  static const Color primaryDark = Color(0xFF1D4ED8); // blue-700
+  static const Color primaryLight = Color(0xFF93C5FD); // blue-300
+  static const Color secondaryColor = Color(0xFF10B981); // emerald-500
+  static const Color secondaryDark = Color(0xFF059669); // emerald-600
+  static const Color errorColor = Color(0xFFEF4444); // red-500
+  static const Color warningColor = Color(0xFFF59E0B); // amber-500
+  static const Color backgroundColor = Color(0xFFF8FAFC); // slate-50
   static const Color surfaceColor = Colors.white;
   static const Color cardColor = Colors.white;
-  static const Color textPrimary = Color(0xFF0F172A);        // slate-900
-  static const Color textSecondary = Color(0xFF64748B);      // slate-500
-  static const Color textMuted = Color(0xFF94A3B8);          // slate-400
-  static const Color borderColor = Color(0xFFE2E8F0);        // slate-200
-  static const Color dividerColor = Color(0xFFF1F5F9);       // slate-100
+  static const Color textPrimary = Color(0xFF0F172A); // slate-900
+  static const Color textSecondary = Color(0xFF64748B); // slate-500
+  static const Color textMuted = Color(0xFF94A3B8); // slate-400
+  static const Color borderColor = Color(0xFFE2E8F0); // slate-200
+  static const Color dividerColor = Color(0xFFF1F5F9); // slate-100
 
   static ThemeData get lightTheme {
     return ThemeData(
@@ -78,7 +78,10 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: errorColor),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         labelStyle: const TextStyle(color: textSecondary),
         hintStyle: const TextStyle(color: textMuted),
       ),
@@ -93,18 +96,17 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: primaryColor.withValues(alpha: 0.1),
-        labelStyle: const TextStyle(color: primaryColor, fontWeight: FontWeight.w500),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+        labelStyle: const TextStyle(
+          color: primaryColor,
+          fontWeight: FontWeight.w500,
         ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         side: BorderSide.none,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 0,
       ),
     );

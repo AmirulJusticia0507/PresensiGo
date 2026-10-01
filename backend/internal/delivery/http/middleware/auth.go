@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 
@@ -24,6 +25,8 @@ func InitJWT(secret string, expireHour int) {
 
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestID := GetRequestID(r.Context())
+		
 		if r.Method == "OPTIONS" {
 			next.ServeHTTP(w, r)
 			return
@@ -37,12 +40,14 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
+			log.Printf("[%s] Authentication failed: missing authorization header for %s %s", requestID, r.Method, path)
 			http.Error(w, `{"error": "authorization header required"}`, http.StatusUnauthorized)
 			return
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || parts[0] != "Bearer" {
+			log.Printf("[%s] Authentication failed: invalid authorization format for %s %s", requestID, r.Method, path)
 			http.Error(w, `{"error": "invalid authorization format"}`, http.StatusUnauthorized)
 			return
 		}
@@ -51,6 +56,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		claims, err := jwtService.ValidateToken(token)
 		if err != nil {
+			log.Printf("[%s] Authentication failed: invalid or expired token for %s %s", requestID, r.Method, path)
 			http.Error(w, `{"error": "invalid or expired token"}`, http.StatusUnauthorized)
 			return
 		}

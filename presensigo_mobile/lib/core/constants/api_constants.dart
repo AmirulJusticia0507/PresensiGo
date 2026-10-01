@@ -6,6 +6,7 @@ class ApiConstants {
   static const String attendanceCheckOut = '/attendance/check-out';
   static const String attendanceToday = '/attendance/today';
   static const String attendanceHistory = '/attendance/history';
+  static const String attendanceSync = '/attendance/sync';
   static const String locations = '/locations';
   static const String faceChallenge = '/face/challenge';
   static const String faceEnrollment = '/profile/face-enrollment';
