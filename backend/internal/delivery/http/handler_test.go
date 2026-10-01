@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
+	"github.com/PresensiGo/backend/internal/delivery/http/middleware"
 	"github.com/PresensiGo/backend/internal/model"
 )
 
@@ -124,5 +126,227 @@ func TestLogin_EmptyBody_Returns400(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+// TestCreateLocationAsAdmin verifies that admin can create locations (201).
+func TestCreateLocationAsAdmin(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
+
+	payload := map[string]interface{}{
+		"name":           "Test Location",
+		"latitude":       6.2,
+		"longitude":      106.8,
+		"radius_meters":  50,
+	}
+	b, _ := json.Marshal(payload)
+
+	ctx := context.WithValue(context.Background(), middleware.RoleKey, "admin")
+	req := httptest.NewRequest(http.MethodPost, "/api/locations", bytes.NewReader(b))
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.CreateLocation(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("expected 201, got %d", w.Code)
+	}
+}
+
+// TestCreateLocationAsEmployee verifies that employee cannot create locations (403).
+func TestCreateLocationAsEmployee(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
+
+	payload := map[string]interface{}{
+		"name":           "Test Location",
+		"latitude":       6.2,
+		"longitude":      106.8,
+		"radius_meters":  50,
+	}
+	b, _ := json.Marshal(payload)
+
+	ctx := context.WithValue(context.Background(), middleware.RoleKey, "employee")
+	req := httptest.NewRequest(http.MethodPost, "/api/locations", bytes.NewReader(b))
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.CreateLocation(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", w.Code)
+	}
+}
+
+// TestUpdateLocationAsAdmin verifies that admin can update locations (200).
+func TestUpdateLocationAsAdmin(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
+
+	payload := map[string]interface{}{
+		"name":           "Updated Location",
+		"latitude":       6.3,
+		"longitude":      106.9,
+		"radius_meters":  60,
+	}
+	b, _ := json.Marshal(payload)
+
+	ctx := context.WithValue(context.Background(), middleware.RoleKey, "admin")
+	locID := uuid.New()
+	req := httptest.NewRequest(http.MethodPut, "/api/locations/"+locID.String(), bytes.NewReader(b))
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Setup mux vars
+	req = mux.SetURLVars(req, map[string]string{"id": locID.String()})
+
+	w := httptest.NewRecorder()
+
+	h.UpdateLocation(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
+// TestUpdateLocationAsEmployee verifies that employee cannot update locations (403).
+func TestUpdateLocationAsEmployee(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
+
+	payload := map[string]interface{}{
+		"name":           "Updated Location",
+		"latitude":       6.3,
+		"longitude":      106.9,
+		"radius_meters":  60,
+	}
+	b, _ := json.Marshal(payload)
+
+	ctx := context.WithValue(context.Background(), middleware.RoleKey, "employee")
+	locID := uuid.New()
+	req := httptest.NewRequest(http.MethodPut, "/api/locations/"+locID.String(), bytes.NewReader(b))
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Setup mux vars
+	req = mux.SetURLVars(req, map[string]string{"id": locID.String()})
+
+	w := httptest.NewRecorder()
+
+	h.UpdateLocation(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", w.Code)
+	}
+}
+
+// TestDeleteLocationAsAdmin verifies that admin can delete locations (200).
+func TestDeleteLocationAsAdmin(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
+
+	ctx := context.WithValue(context.Background(), middleware.RoleKey, "admin")
+	locID := uuid.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/locations/"+locID.String(), nil)
+	req = req.WithContext(ctx)
+
+	// Setup mux vars
+	req = mux.SetURLVars(req, map[string]string{"id": locID.String()})
+
+	w := httptest.NewRecorder()
+
+	h.DeleteLocation(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
+// TestDeleteLocationAsEmployee verifies that employee cannot delete locations (403).
+func TestDeleteLocationAsEmployee(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
+
+	ctx := context.WithValue(context.Background(), middleware.RoleKey, "employee")
+	locID := uuid.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/locations/"+locID.String(), nil)
+	req = req.WithContext(ctx)
+
+	// Setup mux vars
+	req = mux.SetURLVars(req, map[string]string{"id": locID.String()})
+
+	w := httptest.NewRecorder()
+
+	h.DeleteLocation(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", w.Code)
+	}
+}
+
+// TestGetLocationsAsEmployee verifies that employee can read locations (200).
+func TestGetLocationsAsEmployee(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
+
+	ctx := context.WithValue(context.Background(), middleware.RoleKey, "employee")
+	req := httptest.NewRequest(http.MethodGet, "/api/locations", nil)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.GetLocations(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
+// TestRBACIntegration_EmployeeCannotMutateLocation verifies that employee cannot create location.
+func TestRBACIntegration_EmployeeCannotMutateLocation(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
+
+	payload := map[string]interface{}{
+		"name":           "Test Location",
+		"latitude":       6.2,
+		"longitude":      106.8,
+		"radius_meters":  50,
+	}
+	b, _ := json.Marshal(payload)
+
+	// Simulate employee token context
+	employeeCtx := context.WithValue(context.Background(), middleware.RoleKey, "employee")
+
+	req := httptest.NewRequest(http.MethodPost, "/api/locations", bytes.NewReader(b))
+	req = req.WithContext(employeeCtx)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.CreateLocation(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("employee should get 403, got %d", w.Code)
+	}
+}
+
+// TestRBACIntegration_AdminCanMutateLocation verifies that admin can create location.
+func TestRBACIntegration_AdminCanMutateLocation(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
+
+	payload := map[string]interface{}{
+		"name":           "Test Location",
+		"latitude":       6.2,
+		"longitude":      106.8,
+		"radius_meters":  50,
+	}
+	b, _ := json.Marshal(payload)
+
+	// Simulate admin token context
+	adminCtx := context.WithValue(context.Background(), middleware.RoleKey, "admin")
+
+	req := httptest.NewRequest(http.MethodPost, "/api/locations", bytes.NewReader(b))
+	req = req.WithContext(adminCtx)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.CreateLocation(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("admin should get 201, got %d", w.Code)
 	}
 }

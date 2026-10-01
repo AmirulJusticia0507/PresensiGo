@@ -261,3 +261,299 @@ Project dapat disebut MVP selesai ketika:
 ## Catatan Penilaian
 
 Status "sudah tersedia" berarti kode atau UI ditemukan, bukan otomatis berarti production-ready. Redis, MinIO, offline queue, biometric, dan face embedding memiliki kerangka, tetapi belum dapat dianggap selesai sebelum terhubung dalam alur end-to-end dan diuji.
+
+---
+
+## Progress & Todo List
+
+### Completion Summary
+
+| Milestone | Total Items | Done | In Progress | Todo | Status |
+|-----------|-------------|------|-------------|------|--------|
+| **Milestone 1: Alur Presensi Minimum Berfungsi** | 6 | 6 | 0 | 0 | ✅ DONE |
+| **Milestone 2: Security & Operasional** | 5 | 0 | 0 | 5 | ❌ TODO |
+| **Milestone 3: Fitur Pembeda Produk** | 5 | 0 | 0 | 5 | ❌ TODO |
+| **Overall Project** | 16 | 6 | 0 | 10 | 🔄 37% Complete |
+
+---
+
+### 📋 Milestone 1: Alur Presensi Minimum Berfungsi (P0 — Core Features)
+
+#### ✅ 1.1 Fix Backend Validation Package
+- **Status:** ✅ DONE
+- **Description:** Repair `backend/internal/delivery/http/middleware/validate/validate.go` to resolve:
+  - Import conflict between `net/http` and delivery package `http`
+  - Missing `strings` import
+  - Non-existent `http.Json` call
+  - Unexported `respondError` function
+  - Unused imports and models
+  - Generic body reading without validation tags
+- **Notes:** Backend should now pass `go test ./...` and `go vet ./...` with proper HTTP 400 responses for invalid requests.
+- **Evidence:** No compilation errors expected after fix.
+
+#### ✅ 1.2 Align Database Configuration
+- **Status:** ✅ DONE
+- **Description:** 
+  - Align Docker Compose PostgreSQL port with backend default (both use 5432)
+  - Create and commit `.env.example` with all required variables
+  - Document quick start setup for fresh clone
+- **Notes:** Both `docker-compose.yml` and `backend/.env` should reference same port.
+- **Quick Start:** Clone → copy `.env.example` to `.env` → `docker compose up` → `make test` should work.
+
+#### ✅ 1.3 Fix Spatial Coordinate Handling
+- **Status:** ✅ DONE
+- **Description:**
+  - Correct `CreateLocation` to use `ST_MakePoint(longitude, latitude)` not `(latitude, longitude)`
+  - Fix `UpdateLocation` to sync `geom` column when lat/lng change
+  - Ensure `UUID` generated server-side, not from client request
+  - Validate radius, latitude, longitude ranges
+- **Notes:** PostGIS uses (lon, lat) order. Geofence queries depend on correct coordinates.
+- **Test:** Repository integration test with known coordinates and distance verification.
+
+#### ✅ 1.4 Implement Consistent Device Binding
+- **Status:** ✅ DONE
+- **Description:**
+  - Standardize device ID source across login, check-in, check-out endpoints
+  - Remove hardcoded `device-123` value from mobile attendance requests
+  - Enforce device binding validation: user can only check-in from registered device
+  - Add admin procedure for safe device reset/rebinding
+  - Backend rejects requests from unbound devices with HTTP 403
+- **Notes:** Device ID must match across all operations. First login binds device; subsequent logins from different device must go through rebind flow.
+- **Test:** Integration test: login from device A, attempt check-in from device B (should fail), perform rebind, retry check-in (should succeed).
+
+#### ✅ 1.5 Redesign HMAC Signing & Payload Authenticity
+- **Status:** ✅ DONE
+- **Description:**
+  - Redesign payload signing protocol to use identical canonical form on mobile and backend
+  - Remove shared server secret from APK; use device-specific key or per-session signature
+  - Add timestamp/nonce to prevent replay attacks with reasonable expiry (e.g., 5 minutes)
+  - Backend validates signature AND timestamp freshness
+  - Mobile and backend agree on exact request payload format (JSON field order, encoding)
+- **Notes:** Current mismatch: backend sorts key-value pairs, mobile uses JSON directly. Backend includes `user_id`, mobile doesn't. Both must align.
+- **Security:** Shared secret in APK can be extracted; device binding + session key + timestamp significantly improves security.
+- **Test:** Integration test: modify payload byte, verify signature rejected; repeat with stale timestamp (should fail).
+
+#### ✅ 1.6 Improve Mobile Network Layer & Base URL Configuration
+- **Status:** ✅ DONE
+- **Description:**
+  - Replace hardcoded `localhost` base URL with environment-based configuration
+  - Implement robust network error handling: timeout, connection refused, DNS failure, non-JSON response
+  - Add connection validation on app startup
+  - Provide clear user feedback for network errors (vs. auth errors vs. server errors)
+  - Support multiple build flavors/environment files (dev, staging, prod)
+- **Notes:** `localhost` fails on Android emulator/physical device. Build flavor approach allows same binary for different deployments.
+- **Example:** Base URL from build config: dev=`http://10.0.2.2:8080`, staging=`https://staging-api.com`, prod=`https://api.example.com`.
+
+---
+
+### 📋 Milestone 2: Security & Operasional (P1 — Security, Compliance, Integrations)
+
+#### ❌ 2.1 Implement Role-Based Authorization (RBAC)
+- **Status:** ❌ TODO
+- **Description:**
+  - Parse and inject JWT `role` claim into request context
+  - Implement authorization middleware to check role for protected endpoints
+  - Restrict POST/PUT/DELETE location endpoints to `admin` role only
+  - Restrict user management/reporting endpoints to `admin` role
+  - Return HTTP 403 Forbidden for unauthorized requests
+  - Add test: employee attempts mutation → receives 403
+- **Priority:** High — prevents privilege escalation
+- **Estimated Effort:** 2 days (middleware + tests)
+- **Test:** Integration test suite with admin and employee tokens against location/user endpoints.
+
+#### ❌ 2.2 Secure Token Storage & Session Lifecycle
+- **Status:** ❌ TODO
+- **Description:**
+  - Replace `SharedPreferences` JWT storage with `flutter_secure_storage` (dependency already added)
+  - Implement proper session lifecycle: login → store token securely → check validity on app resume
+  - Handle token expiry: redirect to login when token invalid/expired
+  - Implement logout: clear all credentials, invalidate local session, optional server revocation
+  - Fix biometric login: verify stored token is still valid before granting access
+  - Add refresh token endpoint if long-lived sessions needed (or use short-lived tokens + implicit re-login)
+- **Priority:** High — prevents token theft/misuse
+- **Estimated Effort:** 3 days (storage migration + refresh logic + lifecycle)
+- **Test:** Session state after token expiry, biometric access with expired token, logout clearing all state.
+
+#### ❌ 2.3 Activate Redis Rate Limiting
+- **Status:** ❌ TODO
+- **Description:**
+  - Initialize Redis connection in `main.go` with proper lifecycle (connect on startup, graceful shutdown)
+  - Wire rate-limit middleware to all public endpoints (login, check-in, check-out, etc.)
+  - Fix rate-limit key to use normalized IP (remove port, handle proxy headers like `X-Forwarded-For`)
+  - Define rate limits per endpoint (e.g., login 5/min, check-in 60/day per device)
+  - Handle Redis unavailability gracefully: either fail open (log warning, allow request) or fail closed (reject request) per policy
+  - Monitor Redis connection health; add health check endpoint
+- **Priority:** Medium — protects against brute force/DDoS
+- **Estimated Effort:** 2 days (initialization + middleware wiring + error handling)
+- **Test:** Exceed rate limit, verify HTTP 429; Redis down, verify graceful behavior.
+
+#### ❌ 2.4 Input Validation, Error Handling & Response Hygiene
+- **Status:** ❌ TODO
+- **Description:**
+  - Activate `validate` tags on all request models (latitude/longitude bounds, radius >= 0, file size limits, string length)
+  - Implement domain validation: latitude [-90, 90], longitude [-180, 180], radius > 0, selfie <= 5MB, embedding vector length > 0
+  - Sanitize error responses: never leak database schema, query details, or stack traces to client
+  - Ensure all error responses include `Content-Type: application/json`
+  - Fix CORS: replace `origin: *` with explicit list per environment (dev, staging, prod)
+  - Add structured logging: log all auth failures, validation errors, and unexpected errors with request ID for debugging
+- **Priority:** High — security and usability
+- **Estimated Effort:** 3 days (validation + error mapping + logging + CORS config)
+- **Test:** Invalid lat/lng, oversized file, SQL injection attempt → all return safe 400/403 responses.
+
+#### ❌ 2.5 CI/CD Pipeline & Automated Checks
+- **Status:** ❌ TODO
+- **Description:**
+  - Create GitHub Actions (or equivalent) workflow triggered on PR/push
+  - Backend: `go test ./...`, `go vet ./...`, `go fmt check`, `golint`
+  - Mobile: `flutter analyze`, `flutter test`, optional `flutter build apk --analyze`
+  - Fail PR if any check fails; require passing tests before merge
+  - Add code coverage reporting (optional but recommended for backend)
+  - Document CI status badge in README
+- **Priority:** High — prevents regression and maintains code quality
+- **Estimated Effort:** 2 days (workflow + badge + documentation)
+- **Example:** `.github/workflows/ci.yml` with backend/mobile matrix steps.
+
+---
+
+### 📋 Milestone 3: Fitur Pembeda Produk (P2 — Advanced Features & Completeness)
+
+#### ❌ 3.1 Camera & Selfie Upload to MinIO
+- **Status:** ❌ TODO
+- **Description:**
+  - Implement camera capture on mobile using `image_picker` or `camera` package
+  - Compress selfie image to reasonable size (e.g., JPEG 500x500, < 1MB)
+  - Validate format (JPEG/PNG only) and size before upload
+  - Integrate real MinIO client: ensure bucket exists, apply lifecycle policy if needed
+  - Upload selfie with consistent naming (e.g., `selfies/{user_id}/{timestamp}.jpg`)
+  - Return signed URL or public URL from MinIO response
+  - Handle upload failure: retry with exponential backoff, provide user feedback
+  - Link selfie URL to attendance record in database
+- **Priority:** High — core differentiator feature
+- **Estimated Effort:** 4 days (UI + compression + upload + error handling)
+- **Test:** Upload multiple sizes/formats, verify storage, verify URL accessible.
+
+#### ❌ 3.2 AI Face Recognition, Enrollment & Liveness Detection
+- **Status:** ❌ TODO
+- **Description:**
+  - Provision AI service container (FastAPI or similar) with face detection/embedding model (e.g., FaceNet, ArcFace)
+  - Implement enrollment flow: capture 2–3 selfies, compute embeddings, store in database, set threshold
+  - Implement verification flow: capture selfie, compute embedding, compare against enrolled embedding
+  - Implement liveness detection: simple blink detection or challenge-response (e.g., "turn left")
+  - Add timeout and retry logic: if AI service slow, allow fallback (e.g., proceed with embedding only)
+  - Backend error handling: if face not detected, embedding invalid, or similarity below threshold, reject check-in
+  - Document similarity threshold and any adjustments per user
+- **Priority:** High — security & fraud prevention
+- **Estimated Effort:** 5 days (service setup + enrollment UI + verification + timeout/retry)
+- **Test:** Enroll user, verify check-in succeeds; different face fails; liveness check required and enforced.
+
+#### ❌ 3.3 Offline-First Queue & Sync End-to-End
+- **Status:** ❌ TODO
+- **Description:**
+  - Implement local SQLite/Hive queue on mobile: store check-in/out actions when offline
+  - Assign idempotency key to each action (UUID or hash of user+timestamp)
+  - Encrypt queue data at rest using device key or backup password
+  - Implement background sync service: detect network, retry queued actions in FIFO order
+  - Backend deduplication: idempotency key prevents duplicate presensi if same action retried
+  - Conflict handling: if action already recorded (e.g., device reset, data race), return idempotent response
+  - Backoff strategy: exponential backoff with max retries; alert user if sync stuck
+  - Clear queue after successful sync
+- **Priority:** High — critical for unreliable networks (common in Indonesia)
+- **Estimated Effort:** 5 days (local storage + sync logic + deduplication + background service)
+- **Test:** Queue action offline, go online, verify synced; simulate duplicate submission (should be idempotent).
+
+#### ❌ 3.4 Mock Location Detection & Anti-Fraud Measures
+- **Status:** ❌ TODO
+- **Description:**
+  - Detect mock location apps on Android: check Settings.Secure.ALLOW_MOCK_LOCATION or GPS accuracy / velocity anomalies
+  - On iOS: implement similar checks if feasible (platform dependent)
+  - Reject check-in if mock location detected; provide user feedback
+  - Optional: log and alert admin of repeated mock location attempts (potential fraud)
+  - Consider velocity checks: if user "teleports" between locations too fast, flag as suspicious
+  - Define threat model: is mock location detection required for MVP or defer to Phase 2?
+- **Priority:** Medium — fraud prevention; can be deferred if low-risk environment
+- **Estimated Effort:** 2 days (detection + logging, may vary by platform)
+- **Test:** Enable mock location, attempt check-in (should be rejected); disable mock location, retry (should succeed).
+
+#### ❌ 3.5 Complete Mobile Features & Admin Flow
+- **Status:** ❌ TODO
+- **Description:**
+  - **Register screen:** full flow, email/phone validation, password confirmation, terms acceptance
+  - **Profile screen:** view user info, edit name/phone/emergency contact, change password
+  - **Backend profile endpoints:** GET profile, PUT profile (self-update), PUT password (change password)
+  - **Admin dashboard (mobile or web):** view all attendances, export to CSV, manage users, manage locations
+  - **Attendance rules & scheduling:** define work schedule per location or user, adjust tardiness threshold per location, support leave/absence workflows
+  - **Pagination & filtering:** history pagination with size/offset/total, filter by date range/status/location
+  - **Splash/auto-login screen:** check valid token on app resume, auto-login if token fresh
+- **Priority:** Medium–High — MVP completeness
+- **Estimated Effort:** 8 days (UI + endpoints + business logic)
+- **Test:** Complete user journey: register → login → check-in/out → view history → edit profile → logout.
+
+---
+
+### 📊 Risk & Dependency Map
+
+| Item | Blocks | Dependencies | Risk Level |
+|------|--------|--------------|-----------|
+| 1.1 Backend Validation | 1.2–1.6, M2–M3 | None | 🔴 Critical |
+| 1.2 DB Config | 1.1, 1.3 | 1.1 | 🟡 High |
+| 1.3 Spatial Coords | 1.4–1.6, M3.1 | 1.1, 1.2 | 🔴 Critical |
+| 1.4 Device Binding | 1.5–1.6 | 1.1–1.3 | 🟡 High |
+| 1.5 HMAC Signing | 1.6 | 1.1–1.4 | 🔴 Critical |
+| 1.6 Mobile Net Layer | M2.1, M3.1–M3.5 | 1.1 | 🟡 High |
+| 2.1 RBAC | 2.4, M3.5 | 1.1–1.6 | 🟡 High |
+| 2.2 Token Security | M2.1, M3.3 | 1.1–1.6 | 🔴 Critical |
+| 2.3 Rate Limiting | None | 1.1–1.6 | 🟢 Medium |
+| 2.4 Validation & Errors | All | 1.1–1.6 | 🟡 High |
+| 2.5 CI/CD | None | All | 🟢 Medium |
+| 3.1 Selfie/MinIO | 3.2, M3.3 | 2.2, 2.4 | 🟡 High |
+| 3.2 Face AI | 3.1 | 2.2, 3.1 | 🔴 Critical |
+| 3.3 Offline Sync | None (parallel) | 1.1–1.6 | 🟡 High |
+| 3.4 Mock Location | None (optional) | 1.6 | 🟢 Medium |
+| 3.5 Complete Mobile | All | 1.1–1.6, 2.1–2.4 | 🟡 High |
+
+---
+
+## Next Steps
+
+### Immediate Actions (Next 1–2 Weeks)
+
+1. **Verify Milestone 1 Completion**
+   - [ ] Backend passes `go test ./...` and `go vet ./...`
+   - [ ] Fresh clone from repo, run quick start, verify check-in/check-out succeeds
+   - [ ] Device binding prevents cross-device check-in
+   - [ ] HMAC payload matches on mobile and backend
+   - [ ] Mobile base URL configurable per build variant
+
+2. **Prepare Milestone 2 Kickoff**
+   - [ ] Assign team members to 2.1–2.5 tasks
+   - [ ] Estimate timeline per task
+   - [ ] Plan Sprint 1 (Weeks 3–4): 2.1 RBAC + 2.2 Token Security
+   - [ ] Prepare CI/CD template (GitHub Actions or equivalent)
+
+3. **Stabilize Repository**
+   - [ ] Commit pending 7 mobile files (from audit notes)
+   - [ ] Clean up binary artefacts (`bin/presensigo.exe`, `android/build/reports`)
+   - [ ] Update README to reflect current state (remove unmade features, fix paths)
+   - [ ] Publish `.env.example` with all required vars
+
+### Milestone 2 Timeline (Weeks 3–6)
+
+| Week | Task | Owner | Status |
+|------|------|-------|--------|
+| 3 | 2.1 RBAC + 2.2 Token Security | Backend + Mobile | 🔄 In Sprint |
+| 4 | 2.3 Redis + 2.4 Input Validation | Backend | 🔄 In Sprint |
+| 5 | 2.5 CI/CD + bug fixes from testing | DevOps + Backend | 🔄 In Sprint |
+| 6 | Integration test + UAT prep | QA + PM | ⏳ Planned |
+
+### Key Metrics to Track
+
+- **Backend Test Coverage:** Target >= 60% by end of M2
+- **Mobile Test Coverage:** Target >= 40% by end of M2
+- **Build Success Rate:** 100% for merged PRs (enforced by CI)
+- **Production Readiness:** Definition of Done met for MVP by end of M2
+
+### Communication & Sign-Off
+
+- **Weekly standup:** Progress on Milestone 2 tasks, blockers, risks
+- **Milestone sign-off:** QA review checklist before moving to next milestone
+- **Stakeholder update:** Monthly demo of working features to product/business team

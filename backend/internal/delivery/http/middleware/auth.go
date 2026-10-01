@@ -11,7 +11,10 @@ import (
 
 type contextKey string
 
-const UserIDKey contextKey = "user_id"
+const (
+	UserIDKey contextKey = "user_id"
+	RoleKey   contextKey = "role"
+)
 
 var jwtService *auth.JWTService
 
@@ -53,6 +56,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
+		ctx = context.WithValue(ctx, RoleKey, claims.Role)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -62,4 +66,11 @@ func GetUserIDFromContext(ctx context.Context) uuid.UUID {
 		return userID
 	}
 	return uuid.Nil
+}
+
+func GetRoleFromContext(ctx context.Context) string {
+	if role, ok := ctx.Value(RoleKey).(string); ok {
+		return role
+	}
+	return "employee" // default role
 }

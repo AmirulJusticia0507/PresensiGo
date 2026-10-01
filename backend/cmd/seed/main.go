@@ -17,23 +17,60 @@ func main() {
 	}
 	defer db.Close()
 
-	hash, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
+	// Test connection
+	if err := db.Ping(); err != nil {
+		log.Fatal("Failed to connect to database:", err)
+	}
 
-	// Clear existing users
+	// Hash passwords
+	adminHash, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+	employeeHash, _ := bcrypt.GenerateFromPassword([]byte("employee123"), bcrypt.DefaultCost)
+
+	// Clear existing data (only if needed - be careful in production)
 	db.Exec("DELETE FROM attendances")
 	db.Exec("DELETE FROM users")
 
-	// Admin
+	// Admin user
 	adminID := uuid.New()
-	db.Exec(`INSERT INTO users (id, name, email, password_hash, role) VALUES ($1, $2, $3, $4, $5)`,
-		adminID, "Admin", "admin@presensigo.com", string(hash), "admin")
+	_, err = db.Exec(`
+		INSERT INTO users (id, name, email, password_hash, role, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+		ON CONFLICT (email) DO NOTHING
+	`, adminID, "Admin", "admin@presensigo.local", string(adminHash), "admin")
+	if err != nil {
+		log.Println("Error inserting admin user:", err)
+	}
 
-	// Employee
-	empID := uuid.New()
-	db.Exec(`INSERT INTO users (id, name, email, password_hash, role) VALUES ($1, $2, $3, $4, $5)`,
-		empID, "Employee", "employee@presensigo.com", string(hash), "employee")
+	// Employee 1
+	emp1ID := uuid.New()
+	_, err = db.Exec(`
+		INSERT INTO users (id, name, email, password_hash, role, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+		ON CONFLICT (email) DO NOTHING
+	`, emp1ID, "Employee One", "employee1@presensigo.local", string(employeeHash), "employee")
+	if err != nil {
+		log.Println("Error inserting employee 1:", err)
+	}
 
-	fmt.Println("Users created successfully!")
-	fmt.Println("Email: admin@presensigo.com / employee@presensigo.com")
-	fmt.Println("Password: password")
+	// Employee 2
+	emp2ID := uuid.New()
+	_, err = db.Exec(`
+		INSERT INTO users (id, name, email, password_hash, role, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+		ON CONFLICT (email) DO NOTHING
+	`, emp2ID, "Employee Two", "employee2@presensigo.local", string(employeeHash), "employee")
+	if err != nil {
+		log.Println("Error inserting employee 2:", err)
+	}
+
+	fmt.Println("Seed completed successfully!")
+	fmt.Println("")
+	fmt.Println("Admin user:")
+	fmt.Println("  Email: admin@presensigo.local")
+	fmt.Println("  Password: admin123")
+	fmt.Println("")
+	fmt.Println("Employee users:")
+	fmt.Println("  Email: employee1@presensigo.local")
+	fmt.Println("  Email: employee2@presensigo.local")
+	fmt.Println("  Password: employee123")
 }

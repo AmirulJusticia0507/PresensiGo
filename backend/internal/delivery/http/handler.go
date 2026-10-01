@@ -239,6 +239,10 @@ func (h *Handler) UpdateFaceEmbedding(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CreateLocation(w http.ResponseWriter, r *http.Request) {
+	if !requireAdmin(w, r) {
+		return
+	}
+
 	var req model.Location
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "invalid request body")
@@ -257,6 +261,10 @@ func (h *Handler) CreateLocation(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateLocation(w http.ResponseWriter, r *http.Request) {
+	if !requireAdmin(w, r) {
+		return
+	}
+
 	vars := mux.Vars(r)
 	id, err := uuid.Parse(vars["id"])
 	if err != nil {
@@ -279,6 +287,10 @@ func (h *Handler) UpdateLocation(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteLocation(w http.ResponseWriter, r *http.Request) {
+	if !requireAdmin(w, r) {
+		return
+	}
+
 	vars := mux.Vars(r)
 	id, err := uuid.Parse(vars["id"])
 	if err != nil {
@@ -307,4 +319,13 @@ func respondError(w http.ResponseWriter, status int, message string) {
 
 func getUserIDFromContext(r *http.Request) uuid.UUID {
 	return middleware.GetUserIDFromContext(r.Context())
+}
+
+func requireAdmin(w http.ResponseWriter, r *http.Request) bool {
+	role := middleware.GetRoleFromContext(r.Context())
+	if role != "admin" {
+		respondError(w, http.StatusForbidden, "admin role required")
+		return false
+	}
+	return true
 }
