@@ -64,8 +64,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const AttendanceScreen(),
-        transitionsBuilder: (_, animation, __, child) {
+        pageBuilder: (_, _, _) => const AttendanceScreen(),
+        transitionsBuilder: (_, animation, _, child) {
           return FadeTransition(opacity: animation, child: child);
         },
       ),
@@ -154,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.primaryColor.withOpacity(0.3),
+                            color: AppTheme.primaryColor.withValues(alpha: 0.3),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -289,7 +289,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 onPressed: _isLoading ? null : _login,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppTheme.primaryColor,
-                                  disabledBackgroundColor: AppTheme.primaryColor.withOpacity(0.5),
+                                  disabledBackgroundColor: AppTheme.primaryColor.withValues(alpha: 0.5),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),

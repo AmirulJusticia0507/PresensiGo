@@ -43,7 +43,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(Icons.arrow_back_ios_new, size: 18, color: AppTheme.primaryColor),
@@ -78,7 +78,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -143,7 +143,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.1),
+                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
@@ -183,8 +183,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: attendance.status == 'present'
-                        ? AppTheme.secondaryColor.withOpacity(0.1)
-                        : AppTheme.errorColor.withOpacity(0.1),
+                        ? AppTheme.secondaryColor.withValues(alpha: 0.1)
+                        : AppTheme.errorColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(

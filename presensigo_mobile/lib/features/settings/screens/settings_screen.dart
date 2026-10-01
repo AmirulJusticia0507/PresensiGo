@@ -73,7 +73,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.secondaryColor.withOpacity(0.1),
+                color: AppTheme.secondaryColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -135,7 +135,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.errorColor.withOpacity(0.1),
+                color: AppTheme.errorColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -197,7 +197,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.warningColor.withOpacity(0.1),
+                color: AppTheme.warningColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -259,7 +259,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -323,7 +323,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(Icons.arrow_back_ios_new, size: 18, color: AppTheme.primaryColor),
@@ -381,8 +381,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: _biometricAvailable
-                      ? AppTheme.primaryColor.withOpacity(0.1)
-                      : AppTheme.warningColor.withOpacity(0.1),
+                      ? AppTheme.primaryColor.withValues(alpha: 0.1)
+                      : AppTheme.warningColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -424,12 +424,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: _biometricEnabled
-                  ? AppTheme.secondaryColor.withOpacity(0.05)
+                  ? AppTheme.secondaryColor.withValues(alpha: 0.05)
                   : AppTheme.backgroundColor,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: _biometricEnabled
-                    ? AppTheme.secondaryColor.withOpacity(0.2)
+                    ? AppTheme.secondaryColor.withValues(alpha: 0.2)
                     : AppTheme.borderColor,
               ),
             ),
@@ -470,7 +470,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Switch(
                   value: _biometricEnabled,
                   onChanged: _toggleBiometric,
-                  activeColor: AppTheme.secondaryColor,
+                  activeThumbColor: AppTheme.secondaryColor,
                 ),
               ],
             ),
@@ -507,7 +507,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withOpacity(0.1),
+            color: AppTheme.primaryColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 18, color: AppTheme.primaryColor),

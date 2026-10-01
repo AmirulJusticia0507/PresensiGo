@@ -129,7 +129,7 @@ class ApiService {
         'longitude': longitude,
         'device_uuid': deviceUuid,
         'hmac_signature': hmacSignature,
-        if (selfieData != null) 'selfie_data': selfieData,
+        'selfie_data': ?selfieData,
       }),
     );
 

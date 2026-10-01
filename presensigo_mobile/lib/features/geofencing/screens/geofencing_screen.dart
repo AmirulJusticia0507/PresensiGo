@@ -1,11 +1,12 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/location_service.dart';
 import '../../../data/services/api_service.dart';
-import '../../../data/models/attendance_model.dart';
 
 class GeofencingScreen extends StatefulWidget {
   final Function(LatLng position)? onLocationConfirmed;
@@ -74,7 +75,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
           CameraFit.bounds(
             bounds: LatLngBounds.fromPoints([
               _officeLocation!,
-              if (_currentPosition != null) _currentPosition!,
+              ?_currentPosition,
             ]),
             padding: const EdgeInsets.all(100),
           ),
@@ -103,10 +104,14 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.arrow_back_ios_new, size: 18, color: AppTheme.primaryColor),
+            child: const Icon(
+              Icons.arrow_back_ios_new,
+              size: 18,
+              color: AppTheme.primaryColor,
+            ),
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -114,7 +119,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
           Container(
             margin: const EdgeInsets.only(right: 12),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: IconButton(
@@ -129,15 +134,9 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
           : Column(
               children: [
                 // Map
-                Expanded(
-                  flex: 3,
-                  child: _buildMap(),
-                ),
+                Expanded(flex: 3, child: _buildMap()),
                 // Info panel
-                Expanded(
-                  flex: 2,
-                  child: _buildInfoPanel(),
-                ),
+                Expanded(flex: 2, child: _buildInfoPanel()),
               ],
             ),
     );
@@ -150,10 +149,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
 
     return FlutterMap(
       mapController: _mapController,
-      options: MapOptions(
-        initialCenter: _officeLocation!,
-        initialZoom: 16,
-      ),
+      options: MapOptions(initialCenter: _officeLocation!, initialZoom: 16),
       children: [
         // Tile layer
         TileLayer(
@@ -168,8 +164,8 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
               radius: _officeRadius,
               useRadiusInMeter: true,
               color: _isInsideGeofence
-                  ? AppTheme.secondaryColor.withOpacity(0.2)
-                  : AppTheme.errorColor.withOpacity(0.2),
+                  ? AppTheme.secondaryColor.withValues(alpha: 0.2)
+                  : AppTheme.errorColor.withValues(alpha: 0.2),
               borderColor: _isInsideGeofence
                   ? AppTheme.secondaryColor
                   : AppTheme.errorColor,
@@ -192,13 +188,17 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
                   border: Border.all(color: Colors.white, width: 3),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primaryColor.withOpacity(0.3),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.3),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                child: const Icon(Icons.business, color: Colors.white, size: 24),
+                child: const Icon(
+                  Icons.business,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
             ),
             // Current position marker
@@ -209,19 +209,28 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
                 height: 50,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: _isInsideGeofence ? AppTheme.secondaryColor : AppTheme.errorColor,
+                    color: _isInsideGeofence
+                        ? AppTheme.secondaryColor
+                        : AppTheme.errorColor,
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 3),
                     boxShadow: [
                       BoxShadow(
-                        color: (_isInsideGeofence ? AppTheme.secondaryColor : AppTheme.errorColor)
-                            .withOpacity(0.3),
+                        color:
+                            (_isInsideGeofence
+                                    ? AppTheme.secondaryColor
+                                    : AppTheme.errorColor)
+                                .withValues(alpha: 0.3),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.person, color: Colors.white, size: 24),
+                  child: const Icon(
+                    Icons.person,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
               ),
           ],
@@ -252,13 +261,13 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: _isInsideGeofence
-                  ? AppTheme.secondaryColor.withOpacity(0.1)
-                  : AppTheme.errorColor.withOpacity(0.1),
+                  ? AppTheme.secondaryColor.withValues(alpha: 0.1)
+                  : AppTheme.errorColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: _isInsideGeofence
-                    ? AppTheme.secondaryColor.withOpacity(0.3)
-                    : AppTheme.errorColor.withOpacity(0.3),
+                    ? AppTheme.secondaryColor.withValues(alpha: 0.3)
+                    : AppTheme.errorColor.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
@@ -266,7 +275,9 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: _isInsideGeofence ? AppTheme.secondaryColor : AppTheme.errorColor,
+                    color: _isInsideGeofence
+                        ? AppTheme.secondaryColor
+                        : AppTheme.errorColor,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -281,11 +292,15 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _isInsideGeofence ? 'Inside Geofence' : 'Outside Geofence',
+                        _isInsideGeofence
+                            ? 'Inside Geofence'
+                            : 'Outside Geofence',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: _isInsideGeofence ? AppTheme.secondaryColor : AppTheme.errorColor,
+                          color: _isInsideGeofence
+                              ? AppTheme.secondaryColor
+                              : AppTheme.errorColor,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -340,7 +355,9 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
                 backgroundColor: _isInsideGeofence
                     ? AppTheme.secondaryColor
                     : AppTheme.textMuted,
-                disabledBackgroundColor: AppTheme.textMuted.withOpacity(0.3),
+                disabledBackgroundColor: AppTheme.textMuted.withValues(
+                  alpha: 0.3,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -356,7 +373,9 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    _isInsideGeofence ? 'Confirm Location' : 'Move Closer to Office',
+                    _isInsideGeofence
+                        ? 'Confirm Location'
+                        : 'Move Closer to Office',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -386,10 +405,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
             const SizedBox(height: 6),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 11,
-                color: AppTheme.textMuted,
-              ),
+              style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
             ),
             const SizedBox(height: 2),
             Text(

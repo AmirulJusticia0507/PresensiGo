@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/location_service.dart';
 import '../../../core/utils/crypto_helper.dart';
@@ -16,31 +17,16 @@ class AttendanceScreen extends StatefulWidget {
   State<AttendanceScreen> createState() => _AttendanceScreenState();
 }
 
-class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerProviderStateMixin {
+class _AttendanceScreenState extends State<AttendanceScreen> {
   Position? _currentPosition;
   bool _isCheckedIn = false;
   bool _isLoading = true;
   bool _isProcessing = false;
-  late AnimationController _animController;
-  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
-    );
     _loadData();
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -151,7 +137,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+            const Icon(
+              Icons.check_circle_outline,
+              color: Colors.white,
+              size: 20,
+            ),
             const SizedBox(width: 8),
             Expanded(child: Text(message)),
           ],
@@ -176,11 +166,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
           Container(
             margin: const EdgeInsets.only(right: 8),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: IconButton(
-              icon: const Icon(Icons.history_rounded, color: AppTheme.primaryColor),
+              icon: const Icon(
+                Icons.history_rounded,
+                color: AppTheme.primaryColor,
+              ),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -192,11 +185,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
           Container(
             margin: const EdgeInsets.only(right: 8),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: IconButton(
-              icon: const Icon(Icons.settings_outlined, color: AppTheme.primaryColor),
+              icon: const Icon(
+                Icons.settings_outlined,
+                color: AppTheme.primaryColor,
+              ),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -208,16 +204,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
           Container(
             margin: const EdgeInsets.only(right: 12),
             decoration: BoxDecoration(
-              color: AppTheme.errorColor.withOpacity(0.1),
+              color: AppTheme.errorColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: IconButton(
-              icon: const Icon(Icons.logout_rounded, color: AppTheme.errorColor),
+              icon: const Icon(
+                Icons.logout_rounded,
+                color: AppTheme.errorColor,
+              ),
               onPressed: () async {
                 await ApiService.logout();
-                if (mounted) {
-                  Navigator.pushReplacementNamed(context, '/login');
-                }
+                if (!context.mounted) return;
+                Navigator.pushReplacementNamed(context, '/login');
               },
             ),
           ),
@@ -261,7 +259,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
@@ -299,11 +297,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: _currentPosition != null
-                      ? AppTheme.secondaryColor.withOpacity(0.1)
-                      : AppTheme.warningColor.withOpacity(0.1),
+                      ? AppTheme.secondaryColor.withValues(alpha: 0.1)
+                      : AppTheme.warningColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -342,62 +343,66 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
 
   Widget _buildAttendanceButton() {
     return GestureDetector(
-        onTap: _isProcessing ? null : (_isCheckedIn ? _checkOut : _checkIn),
+      onTap: _isProcessing ? null : (_isCheckedIn ? _checkOut : _checkIn),
+      child: Container(
+        width: 220,
+        height: 220,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: _isCheckedIn
+              ? const LinearGradient(
+                  colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : AppGradients.primaryGradient,
+          boxShadow: [
+            BoxShadow(
+              color:
+                  (_isCheckedIn ? AppTheme.errorColor : AppTheme.primaryColor)
+                      .withValues(alpha: 0.4),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
         child: Container(
-          width: 220,
-          height: 220,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: _isCheckedIn
-                ? const LinearGradient(
-                    colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                : AppGradients.primaryGradient,
-            boxShadow: [
-              BoxShadow(
-                color: (_isCheckedIn ? AppTheme.errorColor : AppTheme.primaryColor)
-                    .withOpacity(0.4),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withOpacity(0.2), width: 3),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.2),
+              width: 3,
             ),
-            child: _isProcessing
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 3,
-                    ),
-                  )
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _isCheckedIn ? Icons.logout_rounded : Icons.login_rounded,
-                        size: 56,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _isCheckedIn ? 'Check Out' : 'Check In',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                    ],
-                  ),
           ),
+          child: _isProcessing
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 3,
+                  ),
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _isCheckedIn ? Icons.logout_rounded : Icons.login_rounded,
+                      size: 56,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _isCheckedIn ? 'Check Out' : 'Check In',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                ),
         ),
+      ),
     );
   }
 
@@ -421,14 +426,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: (_isCheckedIn ? AppTheme.secondaryColor : AppTheme.textMuted)
-                            .withOpacity(0.1),
+                        color:
+                            (_isCheckedIn
+                                    ? AppTheme.secondaryColor
+                                    : AppTheme.textMuted)
+                                .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
                         Icons.circle,
                         size: 12,
-                        color: _isCheckedIn ? AppTheme.secondaryColor : AppTheme.textMuted,
+                        color: _isCheckedIn
+                            ? AppTheme.secondaryColor
+                            : AppTheme.textMuted,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -447,7 +457,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: _isCheckedIn ? AppTheme.secondaryColor : AppTheme.textPrimary,
+                    color: _isCheckedIn
+                        ? AppTheme.secondaryColor
+                        : AppTheme.textPrimary,
                   ),
                 ),
               ],
@@ -472,7 +484,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(

@@ -92,7 +92,7 @@ class AppTheme {
         margin: EdgeInsets.zero,
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: primaryColor.withOpacity(0.1),
+        backgroundColor: primaryColor.withValues(alpha: 0.1),
         labelStyle: const TextStyle(color: primaryColor, fontWeight: FontWeight.w500),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
@@ -136,7 +136,7 @@ class AppGradients {
 class AppShadows {
   static List<BoxShadow> get small => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.04),
+      color: Colors.black.withValues(alpha: 0.04),
       blurRadius: 8,
       offset: const Offset(0, 2),
     ),
@@ -144,7 +144,7 @@ class AppShadows {
 
   static List<BoxShadow> get medium => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.06),
+      color: Colors.black.withValues(alpha: 0.06),
       blurRadius: 16,
       offset: const Offset(0, 4),
     ),
@@ -152,7 +152,7 @@ class AppShadows {
 
   static List<BoxShadow> get large => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.08),
+      color: Colors.black.withValues(alpha: 0.08),
       blurRadius: 24,
       offset: const Offset(0, 8),
     ),
