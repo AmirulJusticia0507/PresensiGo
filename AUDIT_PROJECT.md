@@ -270,10 +270,10 @@ Status "sudah tersedia" berarti kode atau UI ditemukan, bukan otomatis berarti p
 
 | Milestone | Total Items | Done | In Progress | Todo | Status |
 |-----------|-------------|------|-------------|------|--------|
-| **Milestone 1: Alur Presensi Minimum Berfungsi** | 6 | 6 | 0 | 0 | ✅ DONE (P0 #1–#6 completed) |
-| **Milestone 2: Security & Operasional** | 5 | 2 | 0 | 3 | 🔄 40% Complete (P1 #1–#2 done) |
+| **Milestone 1: Alur Presensi Minimum Berfungsi** | 6 | 6 | 0 | 0 | ✅ DONE |
+| **Milestone 2: Security & Operasional** | 5 | 3 | 0 | 2 | 🔄 60% Complete |
 | **Milestone 3: Fitur Pembeda Produk** | 5 | 0 | 0 | 5 | ❌ TODO |
-| **Overall Project** | 16 | 8 | 0 | 8 | 🔄 50% Complete |
+| **Overall Project** | 16 | 9 | 0 | 7 | 🔄 56% Complete |
 
 ---
 
@@ -350,20 +350,23 @@ Status "sudah tersedia" berarti kode atau UI ditemukan, bukan otomatis berarti p
 
 #### Completed in This Session
 - ✅ P1 #1: RBAC spec created, 6 tasks executed, code committed
-- ✅ P1 #2: Token Security spec created, 6 tasks executed, code committed
-- ✅ Updated AUDIT_PROJECT.md progress tracking
+- ✅ P1 #2: Token Security spec created, 6 tasks executed, code committed, spec format fixed
+- ✅ P1 #3: Redis Rate Limiting spec created, 5 tasks executed, code committed
+- ✅ AUDIT_PROJECT.md updated with P1 #1, #2, #3 progress
 
 #### Commits
 - `feat: implement role-based authorization (RBAC) untuk location mutations`
 - `feat: implement secure token storage and session lifecycle management`
+- `feat: implement Redis rate limiting for public endpoints`
+- Multiple spec format and documentation commits
 
 #### Branch
-All changes on `fix/validate-middleware` branch. Ready to merge to main after final verification.
+All changes on `fix/validate-middleware` branch.
 
-#### Next Priority (Immediate — Next 2-3 Days)
-1. **P1 #3:** Activate Redis Rate Limiting
-2. **P1 #4:** Input Validation, Error Handling & Response Hygiene
-3. **P1 #5:** CI/CD Pipeline (optional, can defer to later sprint)
+#### Next Priority (Immediate — Next 1-2 Days)
+1. **P1 #4:** Input Validation, Error Handling & Response Hygiene
+2. **P1 #5:** CI/CD Pipeline (optional, can defer)
+3. Run manual verification: login 6x → 6th returns 429; /health → 200 ok; /health/ready → 200/503 based on Redis
 
 #### Future: Milestone 3
 Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile Features
@@ -435,6 +438,29 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 - **Priority:** Medium — protects against brute force/DDoS
 - **Estimated Effort:** 2 days (initialization + middleware wiring + error handling)
 - **Test:** Exceed rate limit, verify HTTP 429; Redis down, verify graceful behavior.
+
+#### ✅ 2.3 Activate Redis Rate Limiting
+- **Status:** ✅ DONE
+- **Completion Date:** Today
+- **Description:** Activate Redis rate limiting to protect against brute force and DDoS. Initialize Redis connection with lifecycle management, wire middleware to endpoints, normalize client IP, define per-endpoint limits, handle Redis unavailability, and add health check endpoints.
+- **Implementation:**
+  - Created `RedisClient` with connection pooling (10 max, 5 min idle, 5s timeout)
+  - Implemented `RateLimiter` middleware with endpoint-specific limits (login 5/min, register 3/min, check-in/out 60/day, default 100/min)
+  - Client IP extraction: handles X-Forwarded-For, X-Real-IP, RemoteAddr (removes port)
+  - Fail-open policy: if Redis unavailable, log warning, allow request
+  - Circuit breaker: 30s threshold, disables rate limiting if Redis down
+  - Health endpoints: GET /health, GET /health/ready with connectivity checks
+  - 8 unit tests: IP extraction, rate limit increment, HTTP 429, headers, fail-open, circuit breaker
+- **Files Modified:**
+  - `backend/internal/infrastructure/redis_client.go` (new)
+  - `backend/internal/delivery/http/middleware/rate_limiter.go` (new)
+  - `backend/internal/delivery/http/middleware/rate_limiter_test.go` (new)
+  - `backend/cmd/api/main.go` (modified - Redis init, middleware wiring)
+  - `backend/internal/delivery/http/handler.go` (Health, HealthReady methods)
+- **Branch:** `fix/validate-middleware`
+- **Commit:** `feat: implement Redis rate limiting for public endpoints`
+- **Priority:** Medium
+- **Test Evidence:** 8 unit tests covering IP extraction, rate limiting, fail-open, circuit breaker
 
 #### ❌ 2.4 Input Validation, Error Handling & Response Hygiene
 - **Status:** ❌ TODO
