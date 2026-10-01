@@ -155,7 +155,7 @@ func (r *AttendanceRepository) GetHistory(userID uuid.UUID, limit, offset int) (
 func (r *AttendanceRepository) CreateLocation(loc *model.Location) error {
 	query := `
 		INSERT INTO locations (id, name, address, latitude, longitude, radius_meters, geom)
-		VALUES ($1, $2, $3, $4, $5, $6, ST_SetSRID(ST_MakePoint($4, $5), 4326))
+		VALUES ($1, $2, $3, $4, $5, $6, ST_SetSRID(ST_MakePoint($5, $4), 4326))
 		RETURNING created_at, updated_at`
 
 	return r.db.QueryRow(query,
@@ -192,9 +192,15 @@ func (r *AttendanceRepository) GetLocations() ([]model.Location, error) {
 }
 
 func (r *AttendanceRepository) UpdateLocation(id uuid.UUID, req *model.Location) error {
-	query := `UPDATE locations SET name = $1, address = $2, latitude = $3, longitude = $4, radius_meters = $5 WHERE id = $6`
-	_, err := r.db.Exec(query, req.Name, req.Address, req.Latitude, req.Longitude, req.RadiusMeters, id)
-	return err
+	query := `
+		UPDATE locations 
+		SET name = $1, address = $2, latitude = $3, longitude = $4, radius_meters = $5,
+			geom = ST_SetSRID(ST_MakePoint($4, $3), 4326),
+			updated_at = NOW()
+		WHERE id = $6
+		RETURNING updated_at`
+	
+	return r.db.QueryRow(query, req.Name, req.Address, req.Latitude, req.Longitude, req.RadiusMeters, id).Scan(&req.UpdatedAt)
 }
 
 func (r *AttendanceRepository) DeleteLocation(id uuid.UUID) error {

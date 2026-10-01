@@ -245,6 +245,9 @@ func (h *Handler) CreateLocation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Generate server-side UUID
+	req.ID = uuid.New()
+
 	if err := h.attUc.CreateLocation(&req); err != nil {
 		respondError(w, http.StatusBadRequest, err.Error())
 		return
