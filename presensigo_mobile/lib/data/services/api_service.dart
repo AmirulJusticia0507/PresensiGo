@@ -4,15 +4,24 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/api_constants.dart';
 import '../models/user_model.dart';
 import '../models/attendance_model.dart';
+import 'secure_storage_service.dart';
+import 'session_manager.dart';
 
 class ApiService {
   static String? _token;
   static UserModel? _currentUser;
+  static final SecureStorageService _secureStorage = SecureStorageService();
+  static final SessionManager _sessionManager = SessionManager();
 
   static UserModel? get currentUser => _currentUser;
 
   static Future<String?> getToken() async {
     if (_token != null) return _token;
+    // First try to get from secure storage
+    _token = await _secureStorage.getToken();
+    if (_token != null) return _token;
+    
+    // Fallback to SharedPreferences for migration
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString('token');
     return _token;
@@ -20,13 +29,16 @@ class ApiService {
 
   static Future<void> _saveToken(String token) async {
     _token = token;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', token);
+    // Save to secure storage instead of SharedPreferences
+    await _secureStorage.saveToken(token);
   }
 
   static Future<void> _clearToken() async {
     _token = null;
     _currentUser = null;
+    // Clear from secure storage
+    await _secureStorage.clearAllCredentials();
+    // Also clear from SharedPreferences for migration safety
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
   }
@@ -37,6 +49,17 @@ class ApiService {
       'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
     };
+  }
+
+  /// Get a valid token or null if expired/missing
+  /// Handles automatic logout on session expiry
+  static Future<String?> getValidToken() async {
+    if (await _sessionManager.isSessionValid()) {
+      return await _secureStorage.getToken();
+    }
+    // Token invalid or expired - clear it and notify
+    await _sessionManager.handleUnauthorized();
+    return null;
   }
 
   static Future<Map<String, dynamic>> login({
@@ -86,7 +109,28 @@ class ApiService {
   }
 
   static Future<void> logout() async {
-    await _clearToken();
+    // Optional: Notify backend of logout (for audit/revocation)
+    try {
+      await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/api/auth/logout'),
+        headers: await _headers(),
+      );
+    } catch (e) {
+      // Ignore errors; local logout always succeeds
+    }
+    
+    // Clear all credentials and session state
+    await _sessionManager.logout();
+  }
+
+  /// Handle 401 responses and return false if session expired
+  static Future<bool> _handleResponse(http.Response response) async {
+    if (response.statusCode == 401) {
+      // Token expired or invalid
+      await _sessionManager.handleUnauthorized();
+      return false;
+    }
+    return true;
   }
 
   static Future<AttendanceModel?> getTodayAttendance() async {
@@ -94,6 +138,8 @@ class ApiService {
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendanceToday}'),
       headers: await _headers(),
     );
+
+    if (!await _handleResponse(response)) return null;
 
     if (response.statusCode == 200) {
       return AttendanceModel.fromJson(jsonDecode(response.body));
@@ -106,6 +152,8 @@ class ApiService {
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendanceHistory}?limit=$limit&offset=$offset'),
       headers: await _headers(),
     );
+
+    if (!await _handleResponse(response)) return [];
 
     if (response.statusCode == 200) {
       final List data = jsonDecode(response.body);
@@ -135,6 +183,10 @@ class ApiService {
       }),
     );
 
+    if (!await _handleResponse(response)) {
+      return {'success': false, 'message': 'Session expired, please log in again'};
+    }
+
     final data = jsonDecode(response.body);
     if (response.statusCode == 200) {
       return {'success': true, 'attendance': AttendanceModel.fromJson(data)};
@@ -161,6 +213,10 @@ class ApiService {
       }),
     );
 
+    if (!await _handleResponse(response)) {
+      return {'success': false, 'message': 'Session expired, please log in again'};
+    }
+
     final data = jsonDecode(response.body);
     if (response.statusCode == 200) {
       return {'success': true, 'attendance': AttendanceModel.fromJson(data)};
@@ -173,6 +229,8 @@ class ApiService {
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.locations}'),
       headers: await _headers(),
     );
+
+    if (!await _handleResponse(response)) return [];
 
     if (response.statusCode == 200) {
       final List data = jsonDecode(response.body);
