@@ -1,4 +1,4 @@
-# P1 #2: Secure Token Storage & Session Lifecycle — Tasks
+# Implementation Plan: Secure Token Storage & Session Lifecycle
 
 ## Overview
 Migrate token storage from SharedPreferences to flutter_secure_storage, implement session lifecycle, handle token expiry, and secure biometric login. 6 main implementation tasks.
