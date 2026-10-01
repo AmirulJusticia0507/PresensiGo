@@ -3,8 +3,8 @@ package repository
 import (
 	"database/sql"
 
-	"github.com/google/uuid"
 	"github.com/PresensiGo/backend/internal/model"
+	"github.com/google/uuid"
 )
 
 type AttendanceRepository struct {
@@ -199,7 +199,7 @@ func (r *AttendanceRepository) UpdateLocation(id uuid.UUID, req *model.Location)
 			updated_at = NOW()
 		WHERE id = $6
 		RETURNING updated_at`
-	
+
 	return r.db.QueryRow(query, req.Name, req.Address, req.Latitude, req.Longitude, req.RadiusMeters, id).Scan(&req.UpdatedAt)
 }
 

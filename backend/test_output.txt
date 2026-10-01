@@ -1,0 +1,25 @@
+=== RUN   TestIPExtractionWithXForwardedFor
+--- PASS: TestIPExtractionWithXForwardedFor (0.01s)
+=== RUN   TestIPExtractionWithXRealIP
+--- PASS: TestIPExtractionWithXRealIP (0.00s)
+=== RUN   TestIPExtractionWithRemoteAddr
+--- PASS: TestIPExtractionWithRemoteAddr (0.00s)
+=== RUN   TestRateLimitIncrement
+--- PASS: TestRateLimitIncrement (0.01s)
+=== RUN   TestRateLimitMiddlewareExceeded
+2026/10/01 12:09:27 ⚠️  Rate limit exceeded: /api/auth/login from 192.168.1.100 (endpoint: login, limit: 5, attempt: 6)
+--- PASS: TestRateLimitMiddlewareExceeded (0.01s)
+=== RUN   TestRateLimitHeaders
+    rate_limiter_test.go:214: Expected remaining 4, got 5
+--- FAIL: TestRateLimitHeaders (0.01s)
+=== RUN   TestRedisUnavailableFailOpen
+2026/10/01 12:09:27 ⚠️  Rate limit check failed (fail-open): mock redis error, allowing request from 192.168.1.100
+--- PASS: TestRedisUnavailableFailOpen (0.00s)
+=== RUN   TestCircuitBreakerState
+2026/10/01 12:09:27 ⚠️  Redis circuit breaker: OPEN (disconnected for >30s)
+--- PASS: TestCircuitBreakerState (0.00s)
+=== RUN   TestRateLimitPerIP
+--- PASS: TestRateLimitPerIP (0.04s)
+FAIL
+FAIL	github.com/PresensiGo/backend/internal/delivery/http/middleware	0.907s
+FAIL

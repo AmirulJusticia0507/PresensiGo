@@ -3,8 +3,8 @@ package repository
 import (
 	"database/sql"
 
-	"github.com/google/uuid"
 	"github.com/PresensiGo/backend/internal/model"
+	"github.com/google/uuid"
 )
 
 type UserRepository struct {

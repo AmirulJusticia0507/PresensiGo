@@ -3,10 +3,14 @@ package http
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -134,10 +138,10 @@ func TestCreateLocationAsAdmin(t *testing.T) {
 	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
 
 	payload := map[string]interface{}{
-		"name":           "Test Location",
-		"latitude":       6.2,
-		"longitude":      106.8,
-		"radius_meters":  50,
+		"name":          "Test Location",
+		"latitude":      6.2,
+		"longitude":     106.8,
+		"radius_meters": 50,
 	}
 	b, _ := json.Marshal(payload)
 
@@ -159,10 +163,10 @@ func TestCreateLocationAsEmployee(t *testing.T) {
 	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
 
 	payload := map[string]interface{}{
-		"name":           "Test Location",
-		"latitude":       6.2,
-		"longitude":      106.8,
-		"radius_meters":  50,
+		"name":          "Test Location",
+		"latitude":      6.2,
+		"longitude":     106.8,
+		"radius_meters": 50,
 	}
 	b, _ := json.Marshal(payload)
 
@@ -184,10 +188,10 @@ func TestUpdateLocationAsAdmin(t *testing.T) {
 	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
 
 	payload := map[string]interface{}{
-		"name":           "Updated Location",
-		"latitude":       6.3,
-		"longitude":      106.9,
-		"radius_meters":  60,
+		"name":          "Updated Location",
+		"latitude":      6.3,
+		"longitude":     106.9,
+		"radius_meters": 60,
 	}
 	b, _ := json.Marshal(payload)
 
@@ -214,10 +218,10 @@ func TestUpdateLocationAsEmployee(t *testing.T) {
 	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
 
 	payload := map[string]interface{}{
-		"name":           "Updated Location",
-		"latitude":       6.3,
-		"longitude":      106.9,
-		"radius_meters":  60,
+		"name":          "Updated Location",
+		"latitude":      6.3,
+		"longitude":     106.9,
+		"radius_meters": 60,
 	}
 	b, _ := json.Marshal(payload)
 
@@ -302,10 +306,10 @@ func TestRBACIntegration_EmployeeCannotMutateLocation(t *testing.T) {
 	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
 
 	payload := map[string]interface{}{
-		"name":           "Test Location",
-		"latitude":       6.2,
-		"longitude":      106.8,
-		"radius_meters":  50,
+		"name":          "Test Location",
+		"latitude":      6.2,
+		"longitude":     106.8,
+		"radius_meters": 50,
 	}
 	b, _ := json.Marshal(payload)
 
@@ -329,10 +333,10 @@ func TestRBACIntegration_AdminCanMutateLocation(t *testing.T) {
 	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
 
 	payload := map[string]interface{}{
-		"name":           "Test Location",
-		"latitude":       6.2,
-		"longitude":      106.8,
-		"radius_meters":  50,
+		"name":          "Test Location",
+		"latitude":      6.2,
+		"longitude":     106.8,
+		"radius_meters": 50,
 	}
 	b, _ := json.Marshal(payload)
 
@@ -348,5 +352,178 @@ func TestRBACIntegration_AdminCanMutateLocation(t *testing.T) {
 
 	if w.Code != http.StatusCreated {
 		t.Errorf("admin should get 201, got %d", w.Code)
+	}
+}
+
+// mockDB is a minimal mock database that implements Ping method
+type mockDB struct {
+	pingError error
+}
+
+func (m *mockDB) Ping() error {
+	return m.pingError
+}
+
+// Other sql.DB methods would be needed for a full implementation, but we only need Ping for health tests
+func (m *mockDB) Exec(query string, args ...interface{}) (sql.Result, error) { return nil, nil }
+func (m *mockDB) Query(query string, args ...interface{}) (*sql.Rows, error) { return nil, nil }
+func (m *mockDB) QueryRow(query string, args ...interface{}) *sql.Row        { return nil }
+func (m *mockDB) Prepare(query string) (*sql.Stmt, error)                    { return nil, nil }
+func (m *mockDB) Begin() (*sql.Tx, error)                                    { return nil, nil }
+func (m *mockDB) Close() error                                               { return nil }
+func (m *mockDB) SetMaxOpenConns(n int)                                      {}
+func (m *mockDB) SetMaxIdleConns(n int)                                      {}
+func (m *mockDB) SetConnMaxLifetime(d time.Duration)                         {}
+func (m *mockDB) SetConnMaxIdleTime(d time.Duration)                         {}
+func (m *mockDB) Stats() sql.DBStats                                         { return sql.DBStats{} }
+
+// mockRedisClient is a minimal mock Redis client
+type mockRedisClient struct {
+	connected bool
+}
+
+func (m *mockRedisClient) IsConnected(ctx context.Context) bool {
+	return m.connected
+}
+
+func (m *mockRedisClient) Close() error { return nil }
+func (m *mockRedisClient) Increment(ctx context.Context, key string, ttl time.Duration) (int64, error) {
+	return 0, nil
+}
+func (m *mockRedisClient) Get(ctx context.Context, key string) (string, error) { return "", nil }
+func (m *mockRedisClient) Delete(ctx context.Context, keys ...string) error    { return nil }
+
+// TestHealthEndpoint tests the /health endpoint returns 200 OK with correct response
+func TestHealthEndpoint(t *testing.T) {
+	// Create handler with mock dependencies
+	db := &mockDB{}
+	redis := &mockRedisClient{connected: true}
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, db, redis)
+
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	w := httptest.NewRecorder()
+
+	h.Health(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	// Check response body
+	var response map[string]string
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if status, ok := response["status"]; !ok || status != "ok" {
+		t.Errorf("expected {\"status\": \"ok\"}, got %v", response)
+	}
+}
+
+// TestHealthReadyEndpoint_Ready tests /health/ready endpoint when both DB and Redis are available
+func TestHealthReadyEndpoint_Ready(t *testing.T) {
+	// Create handler with mock dependencies (both connected)
+	db := &mockDB{pingError: nil} // nil error means connected
+	redis := &mockRedisClient{connected: true}
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, db, redis)
+
+	req := httptest.NewRequest(http.MethodGet, "/health/ready", nil)
+	w := httptest.NewRecorder()
+
+	h.HealthReady(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 when ready, got %d", w.Code)
+	}
+
+	// Check response body
+	var response map[string]bool
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if ready, ok := response["ready"]; !ok || !ready {
+		t.Errorf("expected {\"ready\": true}, got %v", response)
+	}
+}
+
+// TestHealthReadyEndpoint_NotReady_DB tests /health/ready endpoint when DB is unavailable
+func TestHealthReadyEndpoint_NotReady_DB(t *testing.T) {
+	// Create handler with mock dependencies (DB not connected)
+	db := &mockDB{pingError: &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}}
+	redis := &mockRedisClient{connected: true}
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, db, redis)
+
+	req := httptest.NewRequest(http.MethodGet, "/health/ready", nil)
+	w := httptest.NewRecorder()
+
+	h.HealthReady(w, req)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Errorf("expected 503 when DB not ready, got %d", w.Code)
+	}
+
+	// Check response body
+	var response map[string]bool
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if ready, ok := response["ready"]; !ok || ready {
+		t.Errorf("expected {\"ready\": false}, got %v", response)
+	}
+}
+
+// TestHealthReadyEndpoint_NotReady_Redis tests /health/ready endpoint when Redis is unavailable
+func TestHealthReadyEndpoint_NotReady_Redis(t *testing.T) {
+	// Create handler with mock dependencies (Redis not connected)
+	db := &mockDB{pingError: nil} // DB is connected
+	redis := &mockRedisClient{connected: false}
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, db, redis)
+
+	req := httptest.NewRequest(http.MethodGet, "/health/ready", nil)
+	w := httptest.NewRecorder()
+
+	h.HealthReady(w, req)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Errorf("expected 503 when Redis not ready, got %d", w.Code)
+	}
+
+	// Check response body
+	var response map[string]bool
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if ready, ok := response["ready"]; !ok || ready {
+		t.Errorf("expected {\"ready\": false}, got %v", response)
+	}
+}
+
+// TestHealthReadyEndpoint_NotReady_Both tests /health/ready endpoint when both DB and Redis are unavailable
+func TestHealthReadyEndpoint_NotReady_Both(t *testing.T) {
+	// Create handler with mock dependencies (both not connected)
+	db := &mockDB{pingError: &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}}
+	redis := &mockRedisClient{connected: false}
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, db, redis)
+
+	req := httptest.NewRequest(http.MethodGet, "/health/ready", nil)
+	w := httptest.NewRecorder()
+
+	h.HealthReady(w, req)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Errorf("expected 503 when both not ready, got %d", w.Code)
+	}
+
+	// Check response body
+	var response map[string]bool
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if ready, ok := response["ready"]; !ok || ready {
+		t.Errorf("expected {\"ready\": false}, got %v", response)
 	}
 }

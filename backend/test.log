@@ -1,0 +1,8 @@
+2026/10/01 12:15:27 ⚠️  Rate limit exceeded: /api/auth/login from 192.168.1.100 (endpoint: login, limit: 5, attempt: 6)
+--- FAIL: TestRateLimitHeaders (0.00s)
+    rate_limiter_test.go:214: Expected remaining 4, got 5
+2026/10/01 12:15:27 ⚠️  Rate limit check failed (fail-open): mock redis error, allowing request from 192.168.1.100
+2026/10/01 12:15:27 ⚠️  Redis circuit breaker: OPEN (disconnected for >30s)
+FAIL
+FAIL	github.com/PresensiGo/backend/internal/delivery/http/middleware	0.736s
+FAIL

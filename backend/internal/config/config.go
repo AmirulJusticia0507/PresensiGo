@@ -8,10 +8,10 @@ import (
 )
 
 type Config struct {
-	DB    DBConfig
-	Redis RedisConfig
-	MinIO MinIOConfig
-	JWT   JWTConfig
+	DB     DBConfig
+	Redis  RedisConfig
+	MinIO  MinIOConfig
+	JWT    JWTConfig
 	Server ServerConfig
 }
 

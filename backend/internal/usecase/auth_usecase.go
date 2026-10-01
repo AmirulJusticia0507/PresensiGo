@@ -13,8 +13,8 @@ import (
 )
 
 type AuthUsecase struct {
-	userRepo  *repository.UserRepository
-	config    *config.Config
+	userRepo   *repository.UserRepository
+	config     *config.Config
 	jwtService *auth.JWTService
 }
 
