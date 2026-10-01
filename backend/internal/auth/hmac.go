@@ -4,9 +4,11 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 )
 
 func GenerateHMAC(payload map[string]interface{}, secret string) string {
@@ -32,4 +34,24 @@ func GenerateHMAC(payload map[string]interface{}, secret string) string {
 func VerifyHMAC(payload map[string]interface{}, signature string, secret string) bool {
 	expected := GenerateHMAC(payload, secret)
 	return hmac.Equal([]byte(expected), []byte(signature))
+}
+
+func VerifyHMACWithTimestamp(payload map[string]interface{}, signature string, deviceUUID string, timestamp int64) error {
+	// Check timestamp is within 5 minute window
+	now := time.Now().Unix()
+	diff := now - timestamp
+	if diff < 0 {
+		diff = -diff
+	}
+	if diff > 300 { // 5 minutes
+		return errors.New("request expired - timestamp outside valid window")
+	}
+
+	// Verify signature using device UUID as key
+	expected := GenerateHMAC(payload, deviceUUID)
+	if !hmac.Equal([]byte(expected), []byte(signature)) {
+		return errors.New("invalid signature")
+	}
+
+	return nil
 }

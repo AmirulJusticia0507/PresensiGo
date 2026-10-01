@@ -67,18 +67,21 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     setState(() => _isProcessing = true);
 
+    final timestamp = CryptoHelper.getCurrentTimestamp();
     final payload = {
-      'latitude': confirmedPosition.latitude,
-      'longitude': confirmedPosition.longitude,
       'device_uuid': _deviceUuid,
+      'latitude': confirmedPosition.latitude.toString(),
+      'longitude': confirmedPosition.longitude.toString(),
+      'timestamp': timestamp.toString(),
     };
 
-    final hmac = CryptoHelper.generateHMAC(payload, 'your-secret-key');
+    final hmac = CryptoHelper.generateHMAC(payload, _deviceUuid);
 
     final result = await ApiService.checkIn(
       latitude: confirmedPosition.latitude,
       longitude: confirmedPosition.longitude,
       deviceUuid: _deviceUuid,
+      timestamp: timestamp,
       hmacSignature: hmac,
     );
 
@@ -100,18 +103,21 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     setState(() => _isProcessing = true);
 
+    final timestamp = CryptoHelper.getCurrentTimestamp();
     final payload = {
-      'latitude': _currentPosition!.latitude,
-      'longitude': _currentPosition!.longitude,
       'device_uuid': _deviceUuid,
+      'latitude': _currentPosition!.latitude.toString(),
+      'longitude': _currentPosition!.longitude.toString(),
+      'timestamp': timestamp.toString(),
     };
 
-    final hmac = CryptoHelper.generateHMAC(payload, 'your-secret-key');
+    final hmac = CryptoHelper.generateHMAC(payload, _deviceUuid);
 
     final result = await ApiService.checkOut(
       latitude: _currentPosition!.latitude,
       longitude: _currentPosition!.longitude,
       deviceUuid: _deviceUuid,
+      timestamp: timestamp,
       hmacSignature: hmac,
     );
 

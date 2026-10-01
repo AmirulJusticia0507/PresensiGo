@@ -118,6 +118,7 @@ class ApiService {
     required double latitude,
     required double longitude,
     required String deviceUuid,
+    required int timestamp,
     required String hmacSignature,
     String? selfieData,
   }) async {
@@ -128,8 +129,9 @@ class ApiService {
         'latitude': latitude,
         'longitude': longitude,
         'device_uuid': deviceUuid,
+        'timestamp': timestamp,
         'hmac_signature': hmacSignature,
-        'selfie_data': ?selfieData,
+        if (selfieData != null) 'selfie_data': selfieData,
       }),
     );
 
@@ -144,6 +146,7 @@ class ApiService {
     required double latitude,
     required double longitude,
     required String deviceUuid,
+    required int timestamp,
     required String hmacSignature,
   }) async {
     final response = await http.post(
@@ -153,6 +156,7 @@ class ApiService {
         'latitude': latitude,
         'longitude': longitude,
         'device_uuid': deviceUuid,
+        'timestamp': timestamp,
         'hmac_signature': hmacSignature,
       }),
     );

@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,14 +31,17 @@ func NewAttendanceUsecase(attRepo *repository.AttendanceRepository, userRepo *re
 }
 
 func (u *AttendanceUsecase) CheckIn(userID uuid.UUID, req *model.CheckInRequest) (*model.Attendance, error) {
+	// Build payload for HMAC verification
 	payload := map[string]interface{}{
-		"user_id":     userID.String(),
-		"latitude":    req.Latitude,
-		"longitude":   req.Longitude,
 		"device_uuid": req.DeviceUUID,
+		"latitude":    fmt.Sprintf("%v", req.Latitude),
+		"longitude":   fmt.Sprintf("%v", req.Longitude),
+		"timestamp":   fmt.Sprintf("%d", req.Timestamp),
 	}
-	if !auth.VerifyHMAC(payload, req.HMACSig, u.config.JWT.Secret) {
-		return nil, errors.New("invalid signature")
+
+	// Verify HMAC with timestamp check (using device UUID as key)
+	if err := auth.VerifyHMACWithTimestamp(payload, req.HMACSig, req.DeviceUUID, req.Timestamp); err != nil {
+		return nil, err
 	}
 
 	// Device binding validation
@@ -105,13 +109,14 @@ func (u *AttendanceUsecase) CheckIn(userID uuid.UUID, req *model.CheckInRequest)
 
 func (u *AttendanceUsecase) CheckOut(userID uuid.UUID, req *model.CheckOutRequest) (*model.Attendance, error) {
 	payload := map[string]interface{}{
-		"user_id":     userID.String(),
-		"latitude":    req.Latitude,
-		"longitude":   req.Longitude,
 		"device_uuid": req.DeviceUUID,
+		"latitude":    fmt.Sprintf("%v", req.Latitude),
+		"longitude":   fmt.Sprintf("%v", req.Longitude),
+		"timestamp":   fmt.Sprintf("%d", req.Timestamp),
 	}
-	if !auth.VerifyHMAC(payload, req.HMACSig, u.config.JWT.Secret) {
-		return nil, errors.New("invalid signature")
+
+	if err := auth.VerifyHMACWithTimestamp(payload, req.HMACSig, req.DeviceUUID, req.Timestamp); err != nil {
+		return nil, err
 	}
 
 	att, err := u.attRepo.FindTodayByUser(userID)

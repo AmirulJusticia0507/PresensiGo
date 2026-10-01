@@ -41,6 +41,7 @@ type CheckInRequest struct {
 	Latitude    float64 `json:"latitude" validate:"required"`
 	Longitude   float64 `json:"longitude" validate:"required"`
 	DeviceUUID  string  `json:"device_uuid" validate:"required"`
+	Timestamp   int64   `json:"timestamp" validate:"required"`
 	HMACSig     string  `json:"hmac_signature" validate:"required"`
 	SelfieData  string  `json:"selfie_data"`
 }
@@ -49,6 +50,7 @@ type CheckOutRequest struct {
 	Latitude    float64 `json:"latitude" validate:"required"`
 	Longitude   float64 `json:"longitude" validate:"required"`
 	DeviceUUID  string  `json:"device_uuid" validate:"required"`
+	Timestamp   int64   `json:"timestamp" validate:"required"`
 	HMACSig     string  `json:"hmac_signature" validate:"required"`
 }
 
