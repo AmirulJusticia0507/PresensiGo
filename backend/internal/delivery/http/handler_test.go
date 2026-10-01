@@ -1080,9 +1080,9 @@ func TestIntegration_InvalidLongitude_EdgeCases(t *testing.T) {
 	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
 
 	tests := []struct {
-		name       string
-		longitude  float64
-		expectErr  bool
+		name      string
+		longitude float64
+		expectErr bool
 	}{
 		{"longitude_-181", -181, true},
 		{"longitude_181", 181, true},
@@ -1156,14 +1156,14 @@ func TestIntegration_SQLInjection_CheckIn_NoLeak(t *testing.T) {
 
 	userID := uuid.New()
 	payload := map[string]interface{}{
-		"latitude":      6.2,
-		"longitude":     106.8,
-		"device_uuid":   "123e4567-e89b-12d3-a456-426614174000' OR '1'='1", // SQL injection attempt
-		"timestamp":     int64(1234567890),
-		"hmac_signature": "sig",
+		"latitude":           6.2,
+		"longitude":          106.8,
+		"device_uuid":        "123e4567-e89b-12d3-a456-426614174000' OR '1'='1", // SQL injection attempt
+		"timestamp":          int64(1234567890),
+		"hmac_signature":     "sig",
 		"liveness_challenge": "test",
-		"liveness_token": "test",
-		"idempotency_key": uuid.New().String(),
+		"liveness_token":     "test",
+		"idempotency_key":    uuid.New().String(),
 	}
 	b, _ := json.Marshal(payload)
 
@@ -1251,20 +1251,21 @@ func TestIntegration_AuthError_Returns401WithJSON(t *testing.T) {
 
 	userID := uuid.New()
 	payload := map[string]interface{}{
-		"latitude":      6.2,
-		"longitude":     106.8,
-		"device_uuid":   "123e4567-e89b-12d3-a456-426614174000",
-		"timestamp":     int64(1234567890),
-		"hmac_signature": "sig",
+		"latitude":           6.2,
+		"longitude":          106.8,
+		"device_uuid":        "123e4567-e89b-12d3-a456-426614174000",
+		"timestamp":          int64(1234567890),
+		"hmac_signature":     "sig",
 		"liveness_challenge": "test",
-		"liveness_token": "test",
-		"idempotency_key": uuid.New().String(),
+		"liveness_token":     "test",
+		"idempotency_key":    uuid.New().String(),
 	}
 	b, _ := json.Marshal(payload)
 
 	// Note: no user ID in context = unauthorized
 	req := httptest.NewRequest(http.MethodPost, "/api/attendance/check-in", bytes.NewReader(b))
 	req.Header.Set("Content-Type", "application/json")
+	_ = userID // check-in must still be unauthorized without a user ID in context
 
 	w := httptest.NewRecorder()
 	h.CheckIn(w, req)
@@ -1318,9 +1319,11 @@ func TestIntegration_ValidationError_IncludesRequestIDAndHeader(t *testing.T) {
 	}
 
 	// Verify X-Request-ID header exists (would be set by middleware in production)
-	requestIDHeader := w.Header().Get("X-Request-ID")
-	// Note: In handler_test, we test context value instead of header since middleware isn't applied
-	// In integration tests, the middleware would set this header
+	// Note: In handler_test, we test the context value instead of the header since the
+	// middleware is not applied here. In integration tests the middleware sets the header.
+	if requestIDHeader := w.Header().Get("X-Request-ID"); requestIDHeader != "" {
+		t.Logf("X-Request-ID header set by middleware: %s", requestIDHeader)
+	}
 
 	// Verify response includes requestID field
 	var response map[string]interface{}
@@ -1419,12 +1422,12 @@ func TestIntegration_ErrorSanitization_Comprehensive(t *testing.T) {
 	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
 
 	tests := []struct {
-		name               string
-		payload            map[string]interface{}
-		endpoint           string
-		method             string
-		setupContext       func(*http.Request) *http.Request
-		sensitivePatterns  []string
+		name              string
+		payload           map[string]interface{}
+		endpoint          string
+		method            string
+		setupContext      func(*http.Request) *http.Request
+		sensitivePatterns []string
 	}{
 		{
 			name: "invalid_latitude",
@@ -1758,10 +1761,10 @@ func TestStructuredLogging_CheckInSuccess(t *testing.T) {
 
 	userID := uuid.New()
 	payload := map[string]interface{}{
-		"latitude":      6.2,
-		"longitude":     106.8,
-		"device_uuid":   "550e8400-e29b-41d4-a716-446655440000",
-		"signature":     "test_signature",
+		"latitude":    6.2,
+		"longitude":   106.8,
+		"device_uuid": "550e8400-e29b-41d4-a716-446655440000",
+		"signature":   "test_signature",
 	}
 	b, _ := json.Marshal(payload)
 
@@ -1789,10 +1792,10 @@ func TestStructuredLogging_UnauthorizedCheckIn(t *testing.T) {
 	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
 
 	payload := map[string]interface{}{
-		"latitude":      6.2,
-		"longitude":     106.8,
-		"device_uuid":   "550e8400-e29b-41d4-a716-446655440000",
-		"signature":     "test_signature",
+		"latitude":    6.2,
+		"longitude":   106.8,
+		"device_uuid": "550e8400-e29b-41d4-a716-446655440000",
+		"signature":   "test_signature",
 	}
 	b, _ := json.Marshal(payload)
 

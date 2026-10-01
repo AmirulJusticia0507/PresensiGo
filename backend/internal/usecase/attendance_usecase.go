@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"math"
 	"strings"
 	"time"
 
@@ -20,12 +22,12 @@ import (
 )
 
 type AttendanceUsecase struct {
-	attRepo       *repository.AttendanceRepository
-	userRepo      *repository.UserRepository
-	offlineRepo   *repository.OfflineQueueRepository
-	config        *config.Config
-	minio         *storage.Client
-	faceAI        *ai.Client
+	attRepo     *repository.AttendanceRepository
+	userRepo    *repository.UserRepository
+	offlineRepo *repository.OfflineQueueRepository
+	config      *config.Config
+	minio       *storage.Client
+	faceAI      *ai.Client
 }
 
 const maxSelfieSize = 1024 * 1024
@@ -93,16 +95,12 @@ func (u *AttendanceUsecase) checkIn(userID uuid.UUID, req *model.CheckInRequest,
 	}
 
 	if lastCheckOut, err := u.attRepo.FindLastCheckOut(userID); err == nil && lastCheckOut.CheckOutTime != nil {
-		if len(lastCheckOut.CheckOutLocation) >= 2 {
-			lastLat := lastCheckOut.CheckOutLocation[0]
-			lastLng := lastCheckOut.CheckOutLocation[1]
-			timeDiff := time.Since(*lastCheckOut.CheckOutTime).Hours()
-			if timeDiff > 0 && timeDiff < 24 {
-				dist := haversine(lastLat, lastLng, req.Latitude, req.Longitude)
-				speed := dist / timeDiff
-				if speed > 900 {
-					return nil, errors.New("velocity anomaly detected - possible mock location")
-				}
+		if speed, ok := implausibleTravelSpeedKmh(lastCheckOut, req.Latitude, req.Longitude); ok {
+			if speed > suspiciousSpeedKmh {
+				log.Printf("velocity anomaly: user %s travelled %.0f km/h since last check-out", userID, speed)
+			}
+			if speed > maxPlausibleSpeedKmh {
+				return nil, fmt.Errorf("velocity anomaly detected: %.0f km/h exceeds the %.0f km/h limit - possible mock location", speed, maxPlausibleSpeedKmh)
 			}
 		}
 	}
@@ -269,15 +267,40 @@ func (u *AttendanceUsecase) checkOut(userID uuid.UUID, req *model.CheckOutReques
 	return att, nil
 }
 
+const (
+	// maxPlausibleSpeedKmh rejects check-ins that imply physically impossible travel.
+	// Commercial flights cruise near 900 km/h, so anything above this is treated as spoofing.
+	maxPlausibleSpeedKmh = 1000.0
+	// suspiciousSpeedKmh is logged for review but still allowed through.
+	suspiciousSpeedKmh = 200.0
+	// velocityWindowHours bounds how far back a check-out is compared for velocity.
+	velocityWindowHours = 24.0
+)
+
+// implausibleTravelSpeedKmh computes the average travel speed in km/h between the
+// previous check-out position and lat2/lon2. It reports false when the comparison
+// is not meaningful (missing position, non-positive or stale time delta).
+func implausibleTravelSpeedKmh(previous *model.Attendance, lat2, lon2 float64) (float64, bool) {
+	if previous == nil || previous.CheckOutTime == nil || len(previous.CheckOutLocation) < 2 {
+		return 0, false
+	}
+	hours := time.Since(*previous.CheckOutTime).Hours()
+	if hours <= 0 || hours > velocityWindowHours {
+		return 0, false
+	}
+	speed := haversine(previous.CheckOutLocation[0], previous.CheckOutLocation[1], lat2, lon2) / hours
+	return speed, speed > suspiciousSpeedKmh
+}
+
+// haversine returns the great-circle distance between two coordinates in kilometers.
 func haversine(lat1, lon1, lat2, lon2 float64) float64 {
-	const R = 6371.0
-	toRad := func(deg float64) float64 { return deg * 3.141592653589793 / 180.0 }
+	const earthRadiusKm = 6371.0
+	toRad := func(deg float64) float64 { return deg * math.Pi / 180 }
 	dLat := toRad(lat2 - lat1)
 	dLon := toRad(lon2 - lon1)
-	sinDLat := dLat / 2
-	sinDLon := dLon / 2
-	a := sinDLat*sinDLat + toRad(lat1)*toRad(lat2)*sinDLon*sinDLon
-	return 2 * R * 3.141592653589793 / 180.0 * 0.5 * a
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Sin(dLon/2)*math.Sin(dLon/2)*math.Cos(toRad(lat1))*math.Cos(toRad(lat2))
+	return earthRadiusKm * 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 }
 
 func verifyAttendanceProof(payload map[string]interface{}, signature, deviceUUID string, timestamp int64, offline bool) error {

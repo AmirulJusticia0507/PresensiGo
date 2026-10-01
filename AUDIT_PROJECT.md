@@ -272,8 +272,8 @@ Status "sudah tersedia" berarti kode atau UI ditemukan, bukan otomatis berarti p
 |-----------|-------------|------|-------------|------|--------|
 | **Milestone 1: Alur Presensi Minimum Berfungsi** | 6 | 6 | 0 | 0 | ✅ DONE |
 | **Milestone 2: Security & Operasional** | 5 | 3 | 0 | 2 | 🔄 60% Complete |
-| **Milestone 3: Fitur Pembeda Produk** | 5 | 3 | 0 | 2 | 🔄 60% Complete |
-| **Overall Project** | 16 | 12 | 0 | 4 | 🔄 75% Complete |
+| **Milestone 3: Fitur Pembeda Produk** | 5 | 3 | 1 | 1 | 🔄 60% Complete |
+| **Overall Project** | 16 | 12 | 1 | 3 | 🔄 75% Complete |
 
 ---
 
@@ -536,18 +536,25 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 - **Estimated Effort:** 5 days (local storage + sync logic + deduplication + background service)
 - **Test:** Queue action offline, go online, verify synced; simulate duplicate submission (should be idempotent).
 
-#### ❌ 3.4 Mock Location Detection & Anti-Fraud Measures
-- **Status:** ❌ TODO
+#### 🔄 3.4 Mock Location Detection & Anti-Fraud Measures
+- **Status:** 🔄 IN PROGRESS (velocity check + client-side mock/accuracy detection done)
 - **Description:**
-  - Detect mock location apps on Android: check Settings.Secure.ALLOW_MOCK_LOCATION or GPS accuracy / velocity anomalies
-  - On iOS: implement similar checks if feasible (platform dependent)
-  - Reject check-in if mock location detected; provide user feedback
-  - Optional: log and alert admin of repeated mock location attempts (potential fraud)
-  - Consider velocity checks: if user "teleports" between locations too fast, flag as suspicious
-  - Define threat model: is mock location detection required for MVP or defer to Phase 2?
+  - [x] Detect mock location apps on Android: check Settings.Secure.ALLOW_MOCK_LOCATION or GPS accuracy / velocity anomalies
+    - Implemented via `geolocator`'s `Position.isMocked` (Android mock provider, iOS 15+ `isSimulatedBySoftware`)
+  - [x] Reject check-in if mock location detected; provide user feedback
+    - `LocationService.rejectionReason()` blocks check-in/check-out and surfaces the reason
+  - [x] Consider velocity checks: if user "teleports" between locations too fast, flag as suspicious
+    - `implausibleTravelSpeedKmh()` compares the previous check-out position; >1000 km/h is rejected,
+      >200 km/h is logged for review
+  - [ ] On iOS: extend beyond `isMocked` (no public API for detecting jailbroken/mock routing apps)
+  - [ ] Optional: log and alert admin of repeated mock location attempts (potential fraud)
+    - Currently only server-side logging; no admin alert surface yet
+  - [ ] Define threat model: is mock location detection required for MVP or defer to Phase 2?
 - **Priority:** Medium — fraud prevention; can be deferred if low-risk environment
 - **Estimated Effort:** 2 days (detection + logging, may vary by platform)
-- **Test:** Enable mock location, attempt check-in (should be rejected); disable mock location, retry (should succeed).
+- **Test:** Unit tests cover `haversine`, `implausibleTravelSpeedKmh`, and the Flutter-side
+  mock/accuracy rejection. Manual device test still required: enable mock location, attempt
+  check-in (should be rejected); disable mock location, retry (should succeed).
 
 #### ❌ 3.5 Complete Mobile Features & Admin Flow
 - **Status:** ❌ TODO

@@ -69,6 +69,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Future<void> _checkIn() async {
+    if (_currentPosition == null) {
+      _showError('Location not available. Please enable GPS.');
+      return;
+    }
+
+    final spoofReason = LocationService.rejectionReason(_currentPosition!);
+    if (spoofReason != null) {
+      _showError(spoofReason);
+      return;
+    }
+
     // Open geofencing screen first
     final confirmedPosition = await Navigator.push<LatLng>(
       context,
@@ -240,6 +251,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Future<void> _checkOut() async {
     if (_currentPosition == null) {
       _showError('Location not available. Please enable GPS.');
+      return;
+    }
+
+    final spoofReason = LocationService.rejectionReason(_currentPosition!);
+    if (spoofReason != null) {
+      _showError(spoofReason);
       return;
     }
 
@@ -530,9 +547,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: _currentPosition != null
-                      ? AppTheme.secondaryColor.withValues(alpha: 0.1)
-                      : AppTheme.warningColor.withValues(alpha: 0.1),
+                  color: _fixStatus.color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -542,21 +557,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       width: 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: _currentPosition != null
-                            ? AppTheme.secondaryColor
-                            : AppTheme.warningColor,
+                        color: _fixStatus.color,
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      _currentPosition != null ? 'Active' : 'Waiting',
+                      _fixStatus.label,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: _currentPosition != null
-                            ? AppTheme.secondaryColor
-                            : AppTheme.warningColor,
+                        color: _fixStatus.color,
                       ),
                     ),
                   ],
@@ -564,9 +575,59 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
             ],
           ),
+          if (_fixStatus.warning != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _fixStatus.color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    size: 20,
+                    color: _fixStatus.color,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _fixStatus.warning!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: _fixStatus.color,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  _FixStatus get _fixStatus {
+    final position = _currentPosition;
+    if (position == null) {
+      return const _FixStatus(
+        label: 'Waiting',
+        color: AppTheme.warningColor,
+      );
+    }
+    final reason = LocationService.rejectionReason(position);
+    if (reason != null) {
+      final spoofed = LocationService.isMockPosition(position);
+      return _FixStatus(
+        label: spoofed ? 'Mocked' : 'Weak',
+        color: AppTheme.errorColor,
+        warning: reason,
+      );
+    }
+    return const _FixStatus(label: 'Active', color: AppTheme.secondaryColor);
   }
 
   Widget _buildAttendanceButton() {
@@ -747,4 +808,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ],
     );
   }
+}
+
+/// Presentation state for the current GPS fix shown on the location card.
+class _FixStatus {
+  const _FixStatus({
+    required this.label,
+    required this.color,
+    this.warning,
+  });
+
+  final String label;
+  final Color color;
+  final String? warning;
 }
