@@ -1,0 +1,290 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "SecureStorageService created with all methods": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829022777
+      },
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829033419
+      }
+    ],
+    "FlutterSecureStorage configured with platform-specific options": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829022836
+      }
+    ],
+    "No token data in logs or console": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829022914
+      }
+    ],
+    "clearAllCredentials() removes all three keys atomically": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829022998
+      }
+    ],
+    "SessionManager created with all methods": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023044
+      }
+    ],
+    "JWT decoding handles Base64 padding correctly": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023103
+      }
+    ],
+    "isSessionValid() returns false for expired tokens (with 60s buffer)": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023176
+      }
+    ],
+    "isSessionValid() returns false for missing tokens": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023221
+      }
+    ],
+    "logout() clears all session state": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023261
+      }
+    ],
+    "Unit tests pass for expiry detection": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023300
+      }
+    ],
+    "AuthService uses SecureStorageService for token operations": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023343
+      }
+    ],
+    "login() saves token to secure storage": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023390
+      }
+    ],
+    "logout() clears all credentials": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023429
+      }
+    ],
+    "getValidToken() validates session before returning token": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023466
+      }
+    ],
+    "API tests pass: login saves token, logout clears it": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023512
+      }
+    ],
+    "401 responses trigger session logout": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023559
+      }
+    ],
+    "401 responses redirect UI to login": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023615
+      }
+    ],
+    "User sees \"Session expired\" message": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023650
+      }
+    ],
+    "No infinite redirect loops": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023742
+      }
+    ],
+    "Integration test: API returns 401 → token cleared, redirect triggered": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023776
+      }
+    ],
+    "SplashScreen checks session validity on app start": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023818
+      }
+    ],
+    "SplashScreen navigates to correct screen based on session state": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023853
+      }
+    ],
+    "BiometricUnlockScreen shows biometric prompt": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023889
+      }
+    ],
+    "BiometricUnlockScreen validates token freshness before unlocking": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023932
+      }
+    ],
+    "BiometricUnlockScreen allows max 3 retries, then falls back to password login": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829023972
+      }
+    ],
+    "User can manually choose password login from biometric screen": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829024021
+      }
+    ],
+    "Integration tests: valid session with biometric → shows biometric unlock; expired session → redirects to login": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829024057
+      }
+    ],
+    "Login with valid credentials → token saved to secure storage (not SharedPreferences)": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829024093
+      }
+    ],
+    "Logout → all credentials cleared from secure storage": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829024125
+      }
+    ],
+    "App resume with valid token → navigates to attendance without login": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829024164
+      }
+    ],
+    "App resume with expired token → redirects to login": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829024198
+      }
+    ],
+    "Biometric enabled, valid token → shows biometric unlock, enters attendance on success": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829024233
+      }
+    ],
+    "Biometric enabled, expired token → shows session expired dialog": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829024273
+      }
+    ],
+    "API returns 401 during check-in → session cleared, redirected to login": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829024309
+      }
+    ],
+    "Enable biometric, logout → biometric flag cleared, next app open shows login": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829024397
+      }
+    ],
+    "`flutter analyze` passes (no errors)": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829024431
+      }
+    ],
+    "`flutter test` passes (unit + integration tests)": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829024469
+      }
+    ],
+    "Manual test flow passes all steps": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829024502
+      }
+    ],
+    "All files committed to `fix/validate-middleware` branch": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829024537
+      }
+    ],
+    "Commit message includes scope and feature description": [
+      {
+        "executionId": "0d323f19-ec83-4122-8e35-d1ecd69965d3",
+        "chatSessionId": "sess_032dac26-e59b-4ab1-a209-a3dccb7605c4",
+        "timestamp": 1790829024572
+      }
+    ]
+  }
+}
