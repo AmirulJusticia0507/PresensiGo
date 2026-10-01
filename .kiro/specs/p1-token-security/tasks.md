@@ -25,19 +25,24 @@ Migrate token storage from SharedPreferences to flutter_secure_storage, implemen
 
 ## Task Dependency Graph
 
+```json
+{
+  "waves": [
+    { "wave": 1, "tasks": ["1", "2"] },
+    { "wave": 2, "tasks": ["3"] },
+    { "wave": 3, "tasks": ["4"] },
+    { "wave": 4, "tasks": ["5"] },
+    { "wave": 5, "tasks": ["6"] }
+  ]
+}
 ```
-Task 1: SecureStorageService
-    ↓
-Task 2: SessionManager
-    ↓
-Task 3: AuthService Integration ← depends on Task 1, 2
-    ↓
-Task 4: API 401 Interceptor ← depends on Task 3
-    ↓
-Task 5: SplashScreen & BiometricUnlockScreen ← depends on Task 2, 4
-    ↓
-Task 6: Testing & Commit ← depends on Task 1-5
-```
+
+**Wave Explanation:**
+- **Wave 1:** Task 1 (SecureStorageService) and Task 2 (SessionManager) can run in parallel
+- **Wave 2:** Task 3 (AuthService) depends on Task 1 & 2
+- **Wave 3:** Task 4 (API Interceptor) depends on Task 3
+- **Wave 4:** Task 5 (SplashScreen & BiometricUnlockScreen) depends on Task 2 & 4
+- **Wave 5:** Task 6 (Testing & Commit) depends on all prior tasks (1-5)
 
 ## Tasks
 
