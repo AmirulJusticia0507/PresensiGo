@@ -23,13 +23,47 @@ func TestIPExtractionWithXForwardedFor(t *testing.T) {
 	rdb := infrastructure.NewRedisClientForTesting(mr.Addr())
 	limiter := NewRateLimiter(rdb)
 
-	req := httptest.NewRequest("GET", "/test", nil)
-	req.Header.Set("X-Forwarded-For", "192.168.1.100, 10.0.0.1, 172.16.0.1")
+	t.Run("Multiple IPs in X-Forwarded-For takes first IP", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/test", nil)
+		req.Header.Set("X-Forwarded-For", "192.168.1.100, 10.0.0.1, 172.16.0.1")
 
-	ip := limiter.extractClientIP(req)
-	if ip != "192.168.1.100" {
-		t.Errorf("Expected 192.168.1.100, got %s", ip)
-	}
+		ip := limiter.extractClientIP(req)
+		if ip != "192.168.1.100" {
+			t.Errorf("Expected first IP 192.168.1.100, got %s", ip)
+		}
+	})
+
+	t.Run("Single IP in X-Forwarded-For", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/test", nil)
+		req.Header.Set("X-Forwarded-For", "203.0.113.42")
+
+		ip := limiter.extractClientIP(req)
+		if ip != "203.0.113.42" {
+			t.Errorf("Expected IP 203.0.113.42, got %s", ip)
+		}
+	})
+
+	t.Run("X-Forwarded-For with spaces", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/test", nil)
+		req.Header.Set("X-Forwarded-For", "  192.168.1.100 , 10.0.0.1 , 172.16.0.1  ")
+
+		ip := limiter.extractClientIP(req)
+		if ip != "192.168.1.100" {
+			t.Errorf("Expected trimmed IP 192.168.1.100, got %s", ip)
+		}
+	})
+
+	t.Run("X-Forwarded-For takes precedence over X-Real-IP", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/test", nil)
+		req.Header.Set("X-Forwarded-For", "192.168.1.100")
+		req.Header.Set("X-Real-IP", "203.0.113.42")
+		req.RemoteAddr = "10.0.0.1:12345"
+
+		ip := limiter.extractClientIP(req)
+		if ip != "192.168.1.100" {
+			t.Errorf("Expected X-Forwarded-For IP 192.168.1.100, got %s", ip)
+		}
+	})
 }
 
 // TestIPExtractionWithXRealIP tests IP extraction with X-Real-IP header

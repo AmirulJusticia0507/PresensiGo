@@ -15,11 +15,11 @@ import (
 	"github.com/rs/cors"
 
 	"github.com/PresensiGo/backend/internal/config"
-	"github.com/PresensiGo/backend/internal/infrastructure"
 	deliveryhttp "github.com/PresensiGo/backend/internal/delivery/http"
-	storage "github.com/PresensiGo/backend/internal/storage"
 	"github.com/PresensiGo/backend/internal/delivery/http/middleware"
+	"github.com/PresensiGo/backend/internal/infrastructure"
 	"github.com/PresensiGo/backend/internal/repository"
+	storage "github.com/PresensiGo/backend/internal/storage"
 	"github.com/PresensiGo/backend/internal/usecase"
 )
 
@@ -38,7 +38,7 @@ func main() {
 	log.Println("✓ Connected to database")
 
 	// Initialize Redis client
-	redisClient, err := infrastructure.NewRedisClient("localhost:6379")
+	redisClient, err := infrastructure.NewRedisClient(cfg.Redis.Addr)
 	if err != nil {
 		log.Fatalf("Failed to connect to Redis: %v", err)
 	}

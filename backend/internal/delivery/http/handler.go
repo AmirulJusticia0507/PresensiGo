@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -77,11 +78,14 @@ func validateRequest(w http.ResponseWriter, r *http.Request, dst interface{}) er
 
 // Health returns liveness check - simple ok response
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Health check request from %s", r.RemoteAddr)
 	respondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // HealthReady returns readiness check - verifies Redis and database connectivity
 func (h *Handler) HealthReady(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Health readiness check request from %s", r.RemoteAddr)
+
 	// Check database connectivity
 	dbOK := h.db.Ping() == nil
 
@@ -93,9 +97,11 @@ func (h *Handler) HealthReady(w http.ResponseWriter, r *http.Request) {
 	ready := dbOK && redisOK
 
 	if ready {
+		log.Printf("Health readiness: OK (DB: %v, Redis: %v)", dbOK, redisOK)
 		respondJSON(w, http.StatusOK, map[string]bool{"ready": true})
 	} else {
 		// Return 503 Service Unavailable if not ready
+		log.Printf("Health readiness: NOT READY (DB: %v, Redis: %v)", dbOK, redisOK)
 		w.WriteHeader(http.StatusServiceUnavailable)
 		respondJSON(w, http.StatusServiceUnavailable, map[string]bool{"ready": false})
 	}

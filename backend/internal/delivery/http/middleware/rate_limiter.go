@@ -40,11 +40,11 @@ func NewRateLimiter(redis RedisClientInterface) *RateLimiter {
 	return &RateLimiter{
 		redis: redis,
 		configs: map[string]RateLimitConfig{
-			"login":    {Endpoint: "login", Limit: 5, Window: 60 * time.Second},
-			"register": {Endpoint: "register", Limit: 3, Window: 60 * time.Second},
-			"check_in": {Endpoint: "check_in", Limit: 60, Window: 24 * time.Hour},
+			"login":     {Endpoint: "login", Limit: 5, Window: 60 * time.Second},
+			"register":  {Endpoint: "register", Limit: 3, Window: 60 * time.Second},
+			"check_in":  {Endpoint: "check_in", Limit: 60, Window: 24 * time.Hour},
 			"check_out": {Endpoint: "check_out", Limit: 60, Window: 24 * time.Hour},
-			"default":  {Endpoint: "default", Limit: 100, Window: 60 * time.Second},
+			"default":   {Endpoint: "default", Limit: 100, Window: 60 * time.Second},
 		},
 		failOpen:              true, // Fail open: allow request if Redis unavailable
 		circuitBreakerState:   "connected",

@@ -43,7 +43,7 @@ Implement Redis rate limiting to protect against brute force and DDoS attacks on
 
 ## Tasks
 
-- [ ] 1. Initialize Redis client with connection pooling
+- [x] 1. Initialize Redis client with connection pooling
   - Create `backend/internal/infrastructure/redis_client.go`
   - Implement `NewRedisClient(addr)` with connection pooling (max: 10, min idle: 5)
   - Add `Ping()` test on initialization
@@ -58,7 +58,7 @@ Implement Redis rate limiting to protect against brute force and DDoS attacks on
     - Timeout and retry logic works
     - Connection logged to stdout
 
-- [ ] 2. Implement rate limiter middleware service
+- [x] 2. Implement rate limiter middleware service
   - Create `backend/internal/delivery/http/middleware/rate_limiter.go`
   - Implement `RateLimiter` struct with Redis client
   - Implement `RateLimitMiddleware(endpoint)` function
@@ -76,7 +76,7 @@ Implement Redis rate limiting to protect against brute force and DDoS attacks on
     - Redis unavailable → log warning, allow request (fail open)
     - Circuit breaker disables rate limiting after 30s Redis downtime
 
-- [ ] 3. Wire rate limiter middleware to endpoints
+- [x] 3. Wire rate limiter middleware to endpoints
   - Modify `backend/cmd/presensigo/main.go` (or handler registration)
   - Initialize Redis client on startup
   - Initialize rate limiter with Redis client
@@ -94,7 +94,7 @@ Implement Redis rate limiting to protect against brute force and DDoS attacks on
     - App starts with Redis connected
     - Rate limits enforced per endpoint
 
-- [ ] 4. Add health check endpoints
+- [x] 4. Add health check endpoints
   - Add `GET /health` endpoint: returns `{"status": "ok"}` HTTP 200
   - Add `GET /health/ready` endpoint: returns `{"ready": true/false}` HTTP 200/503
   - Readiness check verifies Redis and database connectivity
@@ -108,27 +108,27 @@ Implement Redis rate limiting to protect against brute force and DDoS attacks on
     - No rate limiting on health endpoints
     - Endpoints are public (accessible without auth)
 
-- [ ] 5. Write tests, verify build, and commit
+- [x] 5. Write tests, verify build, and commit
   - Create `backend/internal/delivery/http/middleware/rate_limiter_test.go`
-    - [ ] 5.1 Test IP extraction with X-Forwarded-For header
-    - [ ] 5.2 Test IP extraction with X-Real-IP header
-    - [ ] 5.3 Test IP extraction with RemoteAddr (remove port)
-    - [ ] 5.4 Test rate limit increment and check
-    - [ ] 5.5 Test HTTP 429 when limit exceeded
-    - [ ] 5.6 Test X-RateLimit headers present in response
-    - [ ] 5.7 Test Redis unavailable scenario (fail open)
-    - [ ] 5.8 Test circuit breaker state management
+    - [x] 5.1 Test IP extraction with X-Forwarded-For header
+    - [x] 5.2 Test IP extraction with X-Real-IP header
+    - [x] 5.3 Test IP extraction with RemoteAddr (remove port)
+    - [x] 5.4 Test rate limit increment and check
+    - [x] 5.5 Test HTTP 429 when limit exceeded
+    - [x] 5.6 Test X-RateLimit headers present in response
+    - [x] 5.7 Test Redis unavailable scenario (fail open)
+    - [x] 5.8 Test circuit breaker state management
   - Run `go test ./...` from `backend/` directory
   - Run `go vet ./...` and `go fmt` check
   - Build: `go build ./cmd/presensigo` (no errors)
   - Manual test flow:
-    - [ ] 5.9 Start Docker with redis: `docker compose up redis`
-    - [ ] 5.10 Start backend: `go run ./cmd/presensigo/main.go`
-    - [ ] 5.11 Login 6x in 1 minute → 6th attempt returns 429
-    - [ ] 5.12 Check /health → returns 200 ok
-    - [ ] 5.13 Check /health/ready → returns 200 ready (Redis connected)
-    - [ ] 5.14 Stop Redis, check /health/ready → returns 503 (Redis unavailable)
-    - [ ] 5.15 Stop and restart Redis → rate limiting resumes
+    - [x] 5.9 Start Docker with redis: `docker compose up redis`
+    - [x] 5.10 Start backend: `go run ./cmd/presensigo/main.go`
+    - [x] 5.11 Login 6x in 1 minute → 6th attempt returns 429
+    - [x] 5.12 Check /health → returns 200 ok
+    - [x] 5.13 Check /health/ready → returns 200 ready (Redis connected)
+    - [x] 5.14 Stop Redis, check /health/ready → returns 503 (Redis unavailable)
+    - [x] 5.15 Stop and restart Redis → rate limiting resumes
   - Commit changes:
     ```bash
     git add backend/internal/infrastructure/redis_client.go

@@ -1,7 +1,9 @@
 # P1 #3: Activate Redis Rate Limiting — Design
 
-## Architecture Overview
+## Overview
+Activate Redis rate limiting to protect against brute force attacks and DDoS. Initialize Redis connection with proper lifecycle management, wire rate-limit middleware to protected endpoints, normalize client IP identification, define per-endpoint rate limits, handle Redis unavailability gracefully, and add health check endpoint.
 
+## Architecture
 ### Rate Limiting Flow
 ```
 Request arrives
@@ -24,6 +26,34 @@ Request arrives
       └─ Track circuit breaker state
 ```
 
+## Components and Interfaces
+
+### Redis Client Component
+- **File:** `backend/internal/infrastructure/redis_client.go`
+- **Purpose:** Manages Redis connection lifecycle, connection pooling, and basic Redis operations
+- **Interfaces:** 
+  - `NewRedisClient(addr string)`: Factory function to create Redis client
+  - `Increment(ctx context.Context, key string, ttl time.Duration)`: Atomic increment with TTL
+  - `IsConnected(ctx context.Context)`: Health check
+  - `Close()`: Graceful shutdown
+
+### Rate Limiter Component
+- **File:** `backend/internal/delivery/http/middleware/rate_limiter.go`
+- **Purpose:** Implements rate limiting middleware for HTTP endpoints
+- **Interfaces:**
+  - `NewRateLimiter(redis *infrastructure.RedisClient)`: Factory function
+  - `RateLimitMiddleware(endpoint string)`: Creates middleware for specific endpoint
+  - `IsRedisAvailable(ctx context.Context)`: Circuit breaker state check
+
+### Health Check Component
+- **File:** `backend/internal/delivery/http/handler.go`
+- **Purpose:** Provides health monitoring endpoints
+- **Interfaces:**
+  - `Health(w http.ResponseWriter, r *http.Request)`: Liveness probe
+  - `HealthReady(w http.ResponseWriter, r *http.Request)`: Readiness probe with Redis check
+
+## Data Models
+
 ### Redis Key Schema
 ```
 rate_limit:login:{ip}              → count (TTL: 60s, max: 5)
@@ -34,6 +64,23 @@ rate_limit:default:{ip}            → count (TTL: 60s, max: 100)
 
 circuit_breaker:redis             → state (connected/disconnected)
 circuit_breaker:last_check        → timestamp (Unix seconds)
+```
+
+### Configuration Structures
+```go
+type RateLimitConfig struct {
+	Endpoint string
+	Limit    int64
+	Window   time.Duration
+}
+
+type RateLimiter struct {
+	redis               *infrastructure.RedisClient
+	configs             map[string]RateLimitConfig
+	failOpen            bool
+	circuitBreakerState string
+	lastCheck           time.Time
+}
 ```
 
 ## Technical Implementation
@@ -391,3 +438,64 @@ redis:
 - Rate limit logs don't leak request body (no passwords)
 - Fail open protects availability over perfect rate limiting
 - Circuit breaker prevents cascade failures when Redis down
+
+## Correctness Properties
+
+### Rate Limiting Properties
+1. **Property 1: Rate Limit Enforcement**
+   - For any endpoint with rate limit `N` per window `W`, no client should be able to make more than `N` requests in any `W` time window
+   - **Validates:** Requirements 2.3, 2.4
+
+2. **Property 2: Header Consistency**
+   - When a request is allowed, X-RateLimit headers must accurately reflect remaining quota
+   - `X-RateLimit-Remaining = X-RateLimit-Limit - current_count + 1`
+   - **Validates:** Requirements 2.5
+
+3. **Property 3: Redis Fault Tolerance**
+   - When Redis is unavailable, the system must either:
+     - Fail open: Allow requests and log warnings
+     - Fail closed: Return HTTP 503 Service Unavailable
+   - **Validates:** Requirements 4.1, 4.2, 4.3
+
+4. **Property 4: Client IP Normalization**
+   - Client IP must be extracted consistently regardless of proxy headers or port numbers
+   - IP must not include port numbers or be duplicated across proxy hops
+   - **Validates:** Requirements 3.1, 3.2
+
+### Health Check Properties
+5. **Property 5: Health Endpoint Availability**
+   - Health endpoints must always be accessible without rate limiting or authentication
+   - **Validates:** Requirements 5.5
+
+6. **Property 6: Readiness Accuracy**
+   - Readiness endpoint must accurately reflect Redis connectivity state
+   - **Validates:** Requirements 5.3, 5.4
+
+## Error Handling
+
+### Redis Connection Errors
+- **Connection Failure:** Log error and fail startup if Redis connection fails during initialization
+- **Connection Loss:** Implement circuit breaker pattern with 30-second timeout before disabling rate limiting
+- **Reconnection:** Automatic retry every 10 seconds when Redis is unavailable
+
+### Rate Limiting Errors
+- **Limit Exceeded:** Return HTTP 429 Too Many Requests with appropriate headers
+- **Invalid Configuration:** Use default rate limits (100/min) when endpoint not configured
+- **Key Generation Failures:** Use safe fallback mechanisms to prevent rate limiting bypass
+
+### Client IP Extraction Errors
+- **Malformed Headers:** Gracefully handle malformed X-Forwarded-For headers by falling back to RemoteAddr
+- **IPv6 Support:** Normalize IPv6 addresses for consistent key generation
+- **Private IP Ranges:** Handle private IPs appropriately for internal testing scenarios
+
+### Graceful Degradation Strategies
+1. **Fail Open (Default):** When Redis unavailable, log warning and allow requests
+2. **Circuit Breaker:** After 30 seconds of Redis unavailability, disable rate limiting completely
+3. **Configuration Fallbacks:** Use in-memory rate limiting as fallback (future enhancement)
+4. **Health-Based Routing:** Load balancers can route traffic away from unhealthy instances
+
+### Logging and Monitoring
+- **Error Logging:** All errors logged with appropriate severity levels
+- **Violation Logging:** Rate limit violations logged with IP, endpoint, and timestamp
+- **State Transitions:** Circuit breaker state changes logged for monitoring
+- **Health Metrics:** Redis connectivity metrics exposed for monitoring dashboards

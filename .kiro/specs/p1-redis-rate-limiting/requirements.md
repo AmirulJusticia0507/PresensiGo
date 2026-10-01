@@ -1,4 +1,7 @@
-# P1 #3: Activate Redis Rate Limiting
+# Requirements Document
+
+## Introduction
+This specification defines the requirements for implementing Redis-based rate limiting in the PresensiGo backend to protect against brute force attacks and DDoS. The implementation involves initializing Redis connection management, wiring rate-limit middleware to public endpoints, normalizing client IP identification, defining per-endpoint limits, gracefully handling Redis unavailability, and providing health check endpoints.
 
 ## Overview
 Activate Redis rate limiting to protect against brute force attacks and DDoS. Initialize Redis connection with proper lifecycle management, wire rate-limit middleware to protected endpoints, normalize client IP identification, define per-endpoint rate limits, handle Redis unavailability gracefully, and add health check endpoint.
@@ -64,3 +67,16 @@ Activate Redis rate limiting to protect against brute force attacks and DDoS. In
 - Health endpoints return correct status
 - Rate limit headers included in responses
 - No token/password leaks in rate limit logs
+
+## Glossary
+- **Redis**: In-memory data structure store used for storing rate limit counters
+- **Rate Limiting**: Technique to control the amount of traffic sent to or received by a network interface
+- **DDoS**: Distributed Denial of Service attack
+- **Brute Force Attack**: Attacking method that attempts multiple password or credential combinations
+- **Circuit Breaker**: Design pattern that prevents cascading failures when a service is unavailable
+- **Fail Open**: Graceful degradation strategy that allows requests when rate limiter is unavailable
+- **Fail Closed**: Security-first strategy that denies requests when rate limiter is unavailable
+- **X-Forwarded-For Header**: HTTP header that identifies originating IP of client behind a proxy
+- **IPv6**: Internet Protocol version 6, newer version of IP addressing
+- **Health Check**: Endpoint used to verify service availability and readiness
+- **HTTP 429**: HTTP status code indicating too many requests from a client
