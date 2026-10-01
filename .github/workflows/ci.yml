@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, 'fix/**', 'feat/**']
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  backend:
+    name: Backend (Go)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.21
+          cache: true
+      
+      - name: Run tests
+        run: cd backend && go test ./... -v
+      
+      - name: Run vet
+        run: cd backend && go vet ./...
+      
+      - name: Check formatting
+        run: cd backend && [ -z "$(go fmt ./...)" ] || (echo "Code is not formatted" && exit 1)
+      
+      - name: Run linter
+        uses: golangci/golangci-lint-action@v3
+        with:
+          working-directory: backend
+          version: latest
+      
+      - name: Generate coverage
+        run: cd backend && go test ./... -coverprofile=coverage.out
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./backend/coverage.out
+          flags: backend
+          fail_ci_if_error: false
+
+  mobile:
+    name: Mobile (Flutter)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.13.x
+          cache: true
+      
+      - name: Get dependencies
+        run: cd presensigo_mobile && flutter pub get
+      
+      - name: Run analyze
+        run: cd presensigo_mobile && flutter analyze --no-fatal-infos
+      
+      - name: Run tests
+        run: cd presensigo_mobile && flutter test --coverage
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./presensigo_mobile/coverage/lcov.info
+          flags: mobile
+          fail_ci_if_error: false
+
+  status:
+    name: Status Check
+    runs-on: ubuntu-latest
+    needs: [backend, mobile]
+    if: always()
+    
+    steps:
+      - name: Check status
+        run: |
+          if [ "${{ needs.backend.result }}" != "success" ] || [ "${{ needs.mobile.result }}" != "success" ]; then
+            echo "Backend status: ${{ needs.backend.result }}"
+            echo "Mobile status: ${{ needs.mobile.result }}"
+            exit 1
+          fi
+          echo "All checks passed!"

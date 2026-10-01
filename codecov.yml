@@ -1,0 +1,67 @@
+# Codecov Configuration
+# Reference: https://docs.codecov.io/docs/codecovyml-reference
+
+# Coverage reporting settings
+coverage:
+  # Number of decimal places to display
+  precision: 2
+  # How to round coverage values
+  round: down
+  # Range for color coding (red <X%, yellow X-Y%, green >Y%)
+  range: "70..100"
+
+# Paths to ignore in coverage calculation
+ignore:
+  - "vendor"
+  - "**/mocks"
+  - "**/*_test.go"
+  - "**/test/**"
+
+# Define coverage flags for different components
+flags:
+  backend:
+    paths:
+      - backend/
+    carryforward: true
+  mobile:
+    paths:
+      - presensigo_mobile/
+    carryforward: true
+
+# Codecov will comment on PRs with pass/fail results
+comment:
+  layout: "reach, diff, flags, tree"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+# Coverage requirements and thresholds
+require:
+  # Check if patch/changes coverage is within threshold
+  changes: false
+  # Check overall patch coverage
+  patch: false
+  # Check project-level coverage
+  project:
+    # Default requirement for all coverage
+    default:
+      target: 70%
+      threshold: 5%
+    # Backend-specific requirement
+    backend:
+      target: 75%
+      threshold: 5%
+    # Mobile-specific requirement
+    mobile:
+      target: 65%
+      threshold: 5%
+
+# Status context
+status:
+  # Show overall project status
+  project: yes
+  # Show patch status
+  patch: no
+  # Show changes status
+  changes: no
