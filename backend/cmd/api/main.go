@@ -38,7 +38,7 @@ func main() {
 	minioClient, _ := storage.NewClient(cfg.MinIO.Endpoint, cfg.MinIO.AccessKey, cfg.MinIO.SecretKey, cfg.MinIO.UseSSL)
 
 	authUc := usecase.NewAuthUsecase(userRepo, cfg)
-	attUc := usecase.NewAttendanceUsecase(attRepo, cfg, minioClient)
+	attUc := usecase.NewAttendanceUsecase(attRepo, userRepo, cfg, minioClient)
 
 	httpHandler := deliveryhttp.NewHandler(authUc, attUc)
 

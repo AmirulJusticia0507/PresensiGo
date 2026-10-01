@@ -14,16 +14,18 @@ import (
 )
 
 type AttendanceUsecase struct {
-	attRepo *repository.AttendanceRepository
-	config  *config.Config
-	minio   *storage.Client
+	attRepo  *repository.AttendanceRepository
+	userRepo *repository.UserRepository
+	config   *config.Config
+	minio    *storage.Client
 }
 
-func NewAttendanceUsecase(attRepo *repository.AttendanceRepository, cfg *config.Config, minio *storage.Client) *AttendanceUsecase {
+func NewAttendanceUsecase(attRepo *repository.AttendanceRepository, userRepo *repository.UserRepository, cfg *config.Config, minio *storage.Client) *AttendanceUsecase {
 	return &AttendanceUsecase{
-		attRepo: attRepo,
-		config:  cfg,
-		minio:   minio,
+		attRepo:  attRepo,
+		userRepo: userRepo,
+		config:   cfg,
+		minio:    minio,
 	}
 }
 
@@ -36,6 +38,18 @@ func (u *AttendanceUsecase) CheckIn(userID uuid.UUID, req *model.CheckInRequest)
 	}
 	if !auth.VerifyHMAC(payload, req.HMACSig, u.config.JWT.Secret) {
 		return nil, errors.New("invalid signature")
+	}
+
+	// Device binding validation
+	user, err := u.userRepo.FindByID(userID)
+	if err != nil {
+		return nil, errors.New("user not found")
+	}
+	if user.DeviceUUID == nil {
+		return nil, errors.New("device not bound - please login first")
+	}
+	if *user.DeviceUUID != req.DeviceUUID {
+		return nil, errors.New("device mismatch - unauthorized device")
 	}
 
 	location, err := u.attRepo.FindNearestLocation(req.Latitude, req.Longitude)

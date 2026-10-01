@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/location_service.dart';
@@ -22,11 +23,20 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   bool _isCheckedIn = false;
   bool _isLoading = true;
   bool _isProcessing = false;
+  String _deviceUuid = '';
 
   @override
   void initState() {
     super.initState();
+    _loadDeviceUuid();
     _loadData();
+  }
+
+  Future<void> _loadDeviceUuid() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _deviceUuid = prefs.getString('device_uuid') ?? '';
+    });
   }
 
   Future<void> _loadData() async {
@@ -60,7 +70,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final payload = {
       'latitude': confirmedPosition.latitude,
       'longitude': confirmedPosition.longitude,
-      'device_uuid': 'device-123',
+      'device_uuid': _deviceUuid,
     };
 
     final hmac = CryptoHelper.generateHMAC(payload, 'your-secret-key');
@@ -68,7 +78,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final result = await ApiService.checkIn(
       latitude: confirmedPosition.latitude,
       longitude: confirmedPosition.longitude,
-      deviceUuid: 'device-123',
+      deviceUuid: _deviceUuid,
       hmacSignature: hmac,
     );
 
@@ -93,7 +103,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final payload = {
       'latitude': _currentPosition!.latitude,
       'longitude': _currentPosition!.longitude,
-      'device_uuid': 'device-123',
+      'device_uuid': _deviceUuid,
     };
 
     final hmac = CryptoHelper.generateHMAC(payload, 'your-secret-key');
@@ -101,7 +111,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final result = await ApiService.checkOut(
       latitude: _currentPosition!.latitude,
       longitude: _currentPosition!.longitude,
-      deviceUuid: 'device-123',
+      deviceUuid: _deviceUuid,
       hmacSignature: hmac,
     );
 

@@ -62,9 +62,14 @@ func (u *AuthUsecase) Login(req *model.LoginRequest) (*model.LoginResponse, erro
 		return nil, errors.New("invalid email or password")
 	}
 
+	// Device binding check
 	if user.DeviceUUID == nil {
+		// First login - bind this device
 		_ = u.userRepo.UpdateDeviceUUID(user.ID, req.DeviceUUID)
 		user.DeviceUUID = &req.DeviceUUID
+	} else if *user.DeviceUUID != req.DeviceUUID {
+		// Device mismatch - reject login
+		return nil, errors.New("device not authorized - please contact admin to reset device binding")
 	}
 
 	token, err := u.jwtService.GenerateToken(user.ID, user.Role)
