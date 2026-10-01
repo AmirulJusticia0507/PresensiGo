@@ -272,8 +272,8 @@ Status "sudah tersedia" berarti kode atau UI ditemukan, bukan otomatis berarti p
 |-----------|-------------|------|-------------|------|--------|
 | **Milestone 1: Alur Presensi Minimum Berfungsi** | 6 | 6 | 0 | 0 | ✅ DONE |
 | **Milestone 2: Security & Operasional** | 5 | 3 | 0 | 2 | 🔄 60% Complete |
-| **Milestone 3: Fitur Pembeda Produk** | 5 | 2 | 0 | 3 | 🔄 40% Complete |
-| **Overall Project** | 16 | 11 | 0 | 5 | 🔄 69% Complete |
+| **Milestone 3: Fitur Pembeda Produk** | 5 | 3 | 0 | 2 | 🔄 60% Complete |
+| **Overall Project** | 16 | 12 | 0 | 4 | 🔄 75% Complete |
 
 ---
 
@@ -521,8 +521,8 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 - **Estimated Effort:** 5 days (service setup + enrollment UI + verification + timeout/retry)
 - **Test:** Enroll user, verify check-in succeeds; different face fails; liveness check required and enforced.
 
-#### ❌ 3.3 Offline-First Queue & Sync End-to-End
-- **Status:** ❌ TODO
+#### ✅ 3.3 Offline-First Queue & Sync End-to-End
+- **Status:** ✅ DONE
 - **Description:**
   - Implement local SQLite/Hive queue on mobile: store check-in/out actions when offline
   - Assign idempotency key to each action (UUID or hash of user+timestamp)

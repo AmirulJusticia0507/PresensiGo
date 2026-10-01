@@ -126,6 +126,31 @@ func (r *AttendanceRepository) FindTodayByUser(userID uuid.UUID) (*model.Attenda
 	return att, nil
 }
 
+func (r *AttendanceRepository) FindLastCheckOut(userID uuid.UUID) (*model.Attendance, error) {
+	att := &model.Attendance{}
+	query := `
+		SELECT id, user_id, location_id, check_in_time, check_out_time,
+			CASE WHEN check_out_location IS NOT NULL THEN 
+				ARRAY[ST_Y(check_out_location), ST_X(check_out_location)]
+			ELSE NULL END,
+			selfie_url, status, is_late, device_uuid, hmac_signature, synced, created_at, updated_at
+		FROM attendances 
+		WHERE user_id = $1 AND check_out_time IS NOT NULL
+		ORDER BY check_out_time DESC
+		LIMIT 1`
+
+	err := r.db.QueryRow(query, userID).Scan(
+		&att.ID, &att.UserID, &att.LocationID, &att.CheckInTime, &att.CheckOutTime,
+		&att.CheckOutLocation,
+		&att.SelfieURL, &att.Status, &att.IsLate, &att.DeviceUUID, &att.HMACSignature,
+		&att.Synced, &att.CreatedAt, &att.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return att, nil
+}
+
 func (r *AttendanceRepository) GetHistory(userID uuid.UUID, limit, offset int) ([]model.AttendanceResponse, error) {
 	query := `
 		SELECT a.id, a.user_id, a.location_id, a.check_in_time, a.check_out_time,

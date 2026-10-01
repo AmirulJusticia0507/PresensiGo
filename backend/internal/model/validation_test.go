@@ -78,6 +78,20 @@ func TestCreateLocationRequest_LatitudeEdgeCase_Minimum(t *testing.T) {
 	}
 }
 
+// TestCreateLocationRequest_LatitudeEdgeCase_Zero verifies latitude = 0 passes
+func TestCreateLocationRequest_LatitudeEdgeCase_Zero(t *testing.T) {
+	req := CreateLocationRequest{
+		Name:         "Equator",
+		Latitude:     0,
+		Longitude:    0,
+		RadiusMeters: 50,
+	}
+
+	if err := v.Struct(req); err != nil {
+		t.Errorf("expected latitude = 0 to pass: %v", err)
+	}
+}
+
 // TestCreateLocationRequest_LatitudeEdgeCase_Maximum verifies latitude = 90 passes
 func TestCreateLocationRequest_LatitudeEdgeCase_Maximum(t *testing.T) {
 	req := CreateLocationRequest{
@@ -134,6 +148,20 @@ func TestCreateLocationRequest_LongitudeEdgeCase_Minimum(t *testing.T) {
 	}
 }
 
+// TestCreateLocationRequest_LongitudeEdgeCase_Zero verifies longitude = 0 passes
+func TestCreateLocationRequest_LongitudeEdgeCase_Zero(t *testing.T) {
+	req := CreateLocationRequest{
+		Name:         "Office",
+		Latitude:     6.2,
+		Longitude:    0,
+		RadiusMeters: 50,
+	}
+
+	if err := v.Struct(req); err != nil {
+		t.Errorf("expected longitude = 0 to pass: %v", err)
+	}
+}
+
 // TestCreateLocationRequest_LongitudeEdgeCase_Maximum verifies longitude = 180 passes
 func TestCreateLocationRequest_LongitudeEdgeCase_Maximum(t *testing.T) {
 	req := CreateLocationRequest{
@@ -187,6 +215,20 @@ func TestCreateLocationRequest_RadiusOne(t *testing.T) {
 
 	if err := v.Struct(req); err != nil {
 		t.Errorf("expected radius = 1 to pass: %v", err)
+	}
+}
+
+// TestCreateLocationRequest_RadiusLarge verifies large radius (999999) passes
+func TestCreateLocationRequest_RadiusLarge(t *testing.T) {
+	req := CreateLocationRequest{
+		Name:         "Office",
+		Latitude:     6.2,
+		Longitude:    106.8,
+		RadiusMeters: 999999,
+	}
+
+	if err := v.Struct(req); err != nil {
+		t.Errorf("expected radius = 999999 to pass: %v", err)
 	}
 }
 

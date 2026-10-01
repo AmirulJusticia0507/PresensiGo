@@ -92,6 +92,21 @@ func (u *AttendanceUsecase) checkIn(userID uuid.UUID, req *model.CheckInRequest,
 		return nil, errors.New("already checked in today")
 	}
 
+	if lastCheckOut, err := u.attRepo.FindLastCheckOut(userID); err == nil && lastCheckOut.CheckOutTime != nil {
+		if len(lastCheckOut.CheckOutLocation) >= 2 {
+			lastLat := lastCheckOut.CheckOutLocation[0]
+			lastLng := lastCheckOut.CheckOutLocation[1]
+			timeDiff := time.Since(*lastCheckOut.CheckOutTime).Hours()
+			if timeDiff > 0 && timeDiff < 24 {
+				dist := haversine(lastLat, lastLng, req.Latitude, req.Longitude)
+				speed := dist / timeDiff
+				if speed > 900 {
+					return nil, errors.New("velocity anomaly detected - possible mock location")
+				}
+			}
+		}
+	}
+
 	if req.SelfieData == "" {
 		return nil, errors.New("selfie is required for check-in")
 	}
@@ -252,6 +267,17 @@ func (u *AttendanceUsecase) checkOut(userID uuid.UUID, req *model.CheckOutReques
 	}
 
 	return att, nil
+}
+
+func haversine(lat1, lon1, lat2, lon2 float64) float64 {
+	const R = 6371.0
+	toRad := func(deg float64) float64 { return deg * 3.141592653589793 / 180.0 }
+	dLat := toRad(lat2 - lat1)
+	dLon := toRad(lon2 - lon1)
+	sinDLat := dLat / 2
+	sinDLon := dLon / 2
+	a := sinDLat*sinDLat + toRad(lat1)*toRad(lat2)*sinDLon*sinDLon
+	return 2 * R * 3.141592653589793 / 180.0 * 0.5 * a
 }
 
 func verifyAttendanceProof(payload map[string]interface{}, signature, deviceUUID string, timestamp int64, offline bool) error {

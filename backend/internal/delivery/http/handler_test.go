@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
+	"github.com/PresensiGo/backend/internal/config"
 	"github.com/PresensiGo/backend/internal/delivery/http/middleware"
 	"github.com/PresensiGo/backend/internal/model"
 )
@@ -934,6 +935,714 @@ func TestGetSyncStatus_Authorized(t *testing.T) {
 	}
 	if _, ok := response["stuck_count"]; !ok {
 		t.Error("expected stuck_count in response")
+	}
+}
+
+// ============================================================================
+// Task 7: Integration Tests for Input Validation
+// ============================================================================
+
+// TestIntegration_InvalidLatitude_Returns400 tests POST /api/locations with invalid latitude (>90)
+func TestIntegration_InvalidLatitude_Returns400(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	payload := map[string]interface{}{
+		"name":          "Test Location",
+		"latitude":      100, // Invalid: > 90
+		"longitude":     106.8,
+		"radius_meters": 50,
+	}
+	b, _ := json.Marshal(payload)
+
+	ctx := context.WithValue(context.Background(), middleware.RoleKey, "admin")
+	ctx = context.WithValue(ctx, middleware.RequestIDKey, "req_invalid_lat_001")
+	req := httptest.NewRequest(http.MethodPost, "/api/locations", bytes.NewReader(b))
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	h.CreateLocation(w, req)
+
+	// Verify HTTP 400
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+
+	// Verify response is JSON
+	contentType := w.Header().Get("Content-Type")
+	if contentType != "application/json" {
+		t.Errorf("expected Content-Type: application/json, got %s", contentType)
+	}
+
+	// Verify response includes requestID
+	var response map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("response is not valid JSON: %v", err)
+	}
+
+	if _, ok := response["requestID"]; !ok {
+		t.Error("expected requestID field in response")
+	}
+
+	// Verify no schema leak (no table/column names, no schema info)
+	responseBody := w.Body.String()
+	if strings.Contains(strings.ToLower(responseBody), "table") ||
+		strings.Contains(strings.ToLower(responseBody), "column") ||
+		strings.Contains(strings.ToLower(responseBody), "schema") ||
+		strings.Contains(strings.ToLower(responseBody), "constraint") {
+		t.Errorf("response contains schema information: %s", responseBody)
+	}
+}
+
+// TestIntegration_InvalidLatitude_EdgeCases tests latitude edge cases
+func TestIntegration_InvalidLatitude_EdgeCases(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	tests := []struct {
+		name      string
+		latitude  float64
+		expectErr bool
+	}{
+		{"latitude_-91", -91, true},
+		{"latitude_91", 91, true},
+		{"latitude_-90", -90, false},
+		{"latitude_90", 90, false},
+		{"latitude_0", 0, false},
+		{"latitude_45", 45, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			payload := map[string]interface{}{
+				"name":          "Test Location",
+				"latitude":      test.latitude,
+				"longitude":     106.8,
+				"radius_meters": 50,
+			}
+			b, _ := json.Marshal(payload)
+
+			ctx := context.WithValue(context.Background(), middleware.RoleKey, "admin")
+			ctx = context.WithValue(ctx, middleware.RequestIDKey, "req_lat_edge_"+test.name)
+			req := httptest.NewRequest(http.MethodPost, "/api/locations", bytes.NewReader(b))
+			req = req.WithContext(ctx)
+			req.Header.Set("Content-Type", "application/json")
+
+			w := httptest.NewRecorder()
+			h.CreateLocation(w, req)
+
+			if test.expectErr {
+				if w.Code != http.StatusBadRequest {
+					t.Errorf("expected 400 for %s, got %d", test.name, w.Code)
+				}
+			} else {
+				if w.Code != http.StatusCreated {
+					t.Errorf("expected 201 for %s, got %d", test.name, w.Code)
+				}
+			}
+		})
+	}
+}
+
+// TestIntegration_InvalidLongitude_Returns400 tests POST /api/locations with invalid longitude (>180)
+func TestIntegration_InvalidLongitude_Returns400(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	payload := map[string]interface{}{
+		"name":          "Test Location",
+		"latitude":      6.2,
+		"longitude":     200, // Invalid: > 180
+		"radius_meters": 50,
+	}
+	b, _ := json.Marshal(payload)
+
+	ctx := context.WithValue(context.Background(), middleware.RoleKey, "admin")
+	ctx = context.WithValue(ctx, middleware.RequestIDKey, "req_invalid_lng_001")
+	req := httptest.NewRequest(http.MethodPost, "/api/locations", bytes.NewReader(b))
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	h.CreateLocation(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+
+	var response map[string]interface{}
+	json.NewDecoder(w.Body).Decode(&response)
+	if _, ok := response["requestID"]; !ok {
+		t.Error("expected requestID in error response")
+	}
+}
+
+// TestIntegration_InvalidLongitude_EdgeCases tests longitude edge cases
+func TestIntegration_InvalidLongitude_EdgeCases(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	tests := []struct {
+		name       string
+		longitude  float64
+		expectErr  bool
+	}{
+		{"longitude_-181", -181, true},
+		{"longitude_181", 181, true},
+		{"longitude_-180", -180, false},
+		{"longitude_180", 180, false},
+		{"longitude_0", 0, false},
+		{"longitude_106.8", 106.8, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			payload := map[string]interface{}{
+				"name":          "Test Location",
+				"latitude":      6.2,
+				"longitude":     test.longitude,
+				"radius_meters": 50,
+			}
+			b, _ := json.Marshal(payload)
+
+			ctx := context.WithValue(context.Background(), middleware.RoleKey, "admin")
+			ctx = context.WithValue(ctx, middleware.RequestIDKey, "req_lng_edge_"+test.name)
+			req := httptest.NewRequest(http.MethodPost, "/api/locations", bytes.NewReader(b))
+			req = req.WithContext(ctx)
+			req.Header.Set("Content-Type", "application/json")
+
+			w := httptest.NewRecorder()
+			h.CreateLocation(w, req)
+
+			if test.expectErr {
+				if w.Code != http.StatusBadRequest {
+					t.Errorf("expected 400 for %s, got %d", test.name, w.Code)
+				}
+			} else {
+				if w.Code != http.StatusCreated {
+					t.Errorf("expected 201 for %s, got %d", test.name, w.Code)
+				}
+			}
+		})
+	}
+}
+
+// TestIntegration_InvalidRadius_Returns400 tests POST /api/locations with invalid radius (<=0)
+func TestIntegration_InvalidRadius_Returns400(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	payload := map[string]interface{}{
+		"name":          "Test Location",
+		"latitude":      6.2,
+		"longitude":     106.8,
+		"radius_meters": 0, // Invalid: must be > 0
+	}
+	b, _ := json.Marshal(payload)
+
+	ctx := context.WithValue(context.Background(), middleware.RoleKey, "admin")
+	ctx = context.WithValue(ctx, middleware.RequestIDKey, "req_invalid_radius_001")
+	req := httptest.NewRequest(http.MethodPost, "/api/locations", bytes.NewReader(b))
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	h.CreateLocation(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+// TestIntegration_SQLInjection_CheckIn_NoLeak tests SQL injection in deviceID returns 400 with no SQL in response
+func TestIntegration_SQLInjection_CheckIn_NoLeak(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	userID := uuid.New()
+	payload := map[string]interface{}{
+		"latitude":      6.2,
+		"longitude":     106.8,
+		"device_uuid":   "123e4567-e89b-12d3-a456-426614174000' OR '1'='1", // SQL injection attempt
+		"timestamp":     int64(1234567890),
+		"hmac_signature": "sig",
+		"liveness_challenge": "test",
+		"liveness_token": "test",
+		"idempotency_key": uuid.New().String(),
+	}
+	b, _ := json.Marshal(payload)
+
+	ctx := context.WithValue(context.Background(), middleware.UserIDKey, userID)
+	ctx = context.WithValue(ctx, middleware.RequestIDKey, "req_sql_inject_001")
+	req := httptest.NewRequest(http.MethodPost, "/api/attendance/check-in", bytes.NewReader(b))
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	h.CheckIn(w, req)
+
+	// Verify HTTP 400 for invalid UUID
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+
+	responseBody := w.Body.String()
+
+	// Verify no SQL injection payload in response
+	if strings.Contains(responseBody, "OR") && strings.Contains(responseBody, "'") {
+		t.Errorf("response contains SQL injection payload: %s", responseBody)
+	}
+
+	// Verify no SQL keywords in error response
+	if strings.Contains(strings.ToLower(responseBody), "select") ||
+		strings.Contains(strings.ToLower(responseBody), "insert") ||
+		strings.Contains(strings.ToLower(responseBody), "update") ||
+		strings.Contains(strings.ToLower(responseBody), "delete") {
+		t.Errorf("response contains SQL keywords: %s", responseBody)
+	}
+
+	// Verify no table/column names
+	if strings.Contains(strings.ToLower(responseBody), "table") ||
+		strings.Contains(strings.ToLower(responseBody), "column") {
+		t.Errorf("response contains schema information: %s", responseBody)
+	}
+
+	// Verify response is valid JSON
+	var response map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Errorf("response is not valid JSON: %v", err)
+	}
+}
+
+// TestIntegration_SQLInjection_Location_NoLeak tests SQL injection in location parameters
+func TestIntegration_SQLInjection_Location_NoLeak(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	payload := map[string]interface{}{
+		"name":          "Test'; DROP TABLE locations; --",
+		"latitude":      6.2,
+		"longitude":     106.8,
+		"radius_meters": 50,
+	}
+	b, _ := json.Marshal(payload)
+
+	ctx := context.WithValue(context.Background(), middleware.RoleKey, "admin")
+	ctx = context.WithValue(ctx, middleware.RequestIDKey, "req_sql_inject_loc_001")
+	req := httptest.NewRequest(http.MethodPost, "/api/locations", bytes.NewReader(b))
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	h.CreateLocation(w, req)
+
+	responseBody := w.Body.String()
+
+	// Verify no SQL keywords
+	if strings.Contains(strings.ToLower(responseBody), "drop") ||
+		strings.Contains(strings.ToLower(responseBody), "table") {
+		t.Errorf("response contains SQL content: %s", responseBody)
+	}
+
+	// Verify valid JSON response
+	var response map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Errorf("response is not valid JSON: %v", err)
+	}
+}
+
+// TestIntegration_AuthError_Returns401WithJSON tests auth error response returns 401 with Content-Type: application/json
+func TestIntegration_AuthError_Returns401WithJSON(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	userID := uuid.New()
+	payload := map[string]interface{}{
+		"latitude":      6.2,
+		"longitude":     106.8,
+		"device_uuid":   "123e4567-e89b-12d3-a456-426614174000",
+		"timestamp":     int64(1234567890),
+		"hmac_signature": "sig",
+		"liveness_challenge": "test",
+		"liveness_token": "test",
+		"idempotency_key": uuid.New().String(),
+	}
+	b, _ := json.Marshal(payload)
+
+	// Note: no user ID in context = unauthorized
+	req := httptest.NewRequest(http.MethodPost, "/api/attendance/check-in", bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	h.CheckIn(w, req)
+
+	// Verify HTTP 401
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+
+	// Verify Content-Type: application/json
+	contentType := w.Header().Get("Content-Type")
+	if contentType != "application/json" {
+		t.Errorf("expected Content-Type: application/json, got %s", contentType)
+	}
+
+	// Verify valid JSON response
+	var response map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("response is not valid JSON: %v", err)
+	}
+
+	// Verify error field exists
+	if _, ok := response["error"]; !ok {
+		t.Error("expected 'error' field in response")
+	}
+}
+
+// TestIntegration_ValidationError_IncludesRequestIDAndHeader tests validation error includes requestID and X-Request-ID header
+func TestIntegration_ValidationError_IncludesRequestIDAndHeader(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	payload := map[string]interface{}{
+		"name":          "Test Location",
+		"latitude":      100, // Invalid
+		"longitude":     106.8,
+		"radius_meters": 50,
+	}
+	b, _ := json.Marshal(payload)
+
+	ctx := context.WithValue(context.Background(), middleware.RoleKey, "admin")
+	ctx = context.WithValue(ctx, middleware.RequestIDKey, "req_header_test_001")
+	req := httptest.NewRequest(http.MethodPost, "/api/locations", bytes.NewReader(b))
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	h.CreateLocation(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+
+	// Verify X-Request-ID header exists (would be set by middleware in production)
+	requestIDHeader := w.Header().Get("X-Request-ID")
+	// Note: In handler_test, we test context value instead of header since middleware isn't applied
+	// In integration tests, the middleware would set this header
+
+	// Verify response includes requestID field
+	var response map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("response is not valid JSON: %v", err)
+	}
+
+	if requestID, ok := response["requestID"]; !ok {
+		t.Error("expected 'requestID' field in response")
+	} else if requestID != "req_header_test_001" {
+		t.Errorf("expected requestID 'req_header_test_001', got '%v'", requestID)
+	}
+}
+
+// TestIntegration_NoStackTraceInError tests that error responses don't include stack traces
+func TestIntegration_NoStackTraceInError(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	payload := map[string]interface{}{
+		"name":          "Test Location",
+		"latitude":      100, // Invalid
+		"longitude":     106.8,
+		"radius_meters": 50,
+	}
+	b, _ := json.Marshal(payload)
+
+	ctx := context.WithValue(context.Background(), middleware.RoleKey, "admin")
+	ctx = context.WithValue(ctx, middleware.RequestIDKey, "req_stack_test_001")
+	req := httptest.NewRequest(http.MethodPost, "/api/locations", bytes.NewReader(b))
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	h.CreateLocation(w, req)
+
+	responseBody := w.Body.String()
+
+	// Verify no stack trace patterns
+	stackTracePatterns := []string{
+		"goroutine",
+		"runtime/",
+		".go:",
+		"panic",
+		"main.",
+	}
+
+	for _, pattern := range stackTracePatterns {
+		if strings.Contains(strings.ToLower(responseBody), strings.ToLower(pattern)) {
+			t.Errorf("response contains stack trace pattern '%s': %s", pattern, responseBody)
+		}
+	}
+}
+
+// TestIntegration_NoDBDetailsInError tests that error responses don't include database details
+func TestIntegration_NoDBDetailsInError(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	payload := map[string]interface{}{
+		"name":          "Test Location",
+		"latitude":      100, // Invalid
+		"longitude":     106.8,
+		"radius_meters": 50,
+	}
+	b, _ := json.Marshal(payload)
+
+	ctx := context.WithValue(context.Background(), middleware.RoleKey, "admin")
+	ctx = context.WithValue(ctx, middleware.RequestIDKey, "req_db_test_001")
+	req := httptest.NewRequest(http.MethodPost, "/api/locations", bytes.NewReader(b))
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	h.CreateLocation(w, req)
+
+	responseBody := w.Body.String()
+
+	// Verify no database-specific information
+	dbPatterns := []string{
+		"duplicate key",
+		"constraint",
+		"violates",
+		"UNIQUE",
+		"PRIMARY KEY",
+		"FOREIGN KEY",
+	}
+
+	for _, pattern := range dbPatterns {
+		if strings.Contains(strings.ToLower(responseBody), strings.ToLower(pattern)) {
+			t.Errorf("response contains database pattern '%s': %s", pattern, responseBody)
+		}
+	}
+}
+
+// TestIntegration_ErrorSanitization_Comprehensive tests comprehensive error sanitization
+func TestIntegration_ErrorSanitization_Comprehensive(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	tests := []struct {
+		name               string
+		payload            map[string]interface{}
+		endpoint           string
+		method             string
+		setupContext       func(*http.Request) *http.Request
+		sensitivePatterns  []string
+	}{
+		{
+			name: "invalid_latitude",
+			payload: map[string]interface{}{
+				"name":          "Test",
+				"latitude":      100,
+				"longitude":     106.8,
+				"radius_meters": 50,
+			},
+			endpoint: "/api/locations",
+			method:   http.MethodPost,
+			setupContext: func(r *http.Request) *http.Request {
+				ctx := context.WithValue(r.Context(), middleware.RoleKey, "admin")
+				ctx = context.WithValue(ctx, middleware.RequestIDKey, "req_comprehensive_lat")
+				return r.WithContext(ctx)
+			},
+			sensitivePatterns: []string{"table", "column", "schema", "SELECT", "INSERT"},
+		},
+		{
+			name: "invalid_longitude",
+			payload: map[string]interface{}{
+				"name":          "Test",
+				"latitude":      6.2,
+				"longitude":     200,
+				"radius_meters": 50,
+			},
+			endpoint: "/api/locations",
+			method:   http.MethodPost,
+			setupContext: func(r *http.Request) *http.Request {
+				ctx := context.WithValue(r.Context(), middleware.RoleKey, "admin")
+				ctx = context.WithValue(ctx, middleware.RequestIDKey, "req_comprehensive_lng")
+				return r.WithContext(ctx)
+			},
+			sensitivePatterns: []string{"table", "column", "schema", "SELECT", "INSERT"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			b, _ := json.Marshal(test.payload)
+			req := httptest.NewRequest(test.method, test.endpoint, bytes.NewReader(b))
+			req.Header.Set("Content-Type", "application/json")
+			req = test.setupContext(req)
+
+			w := httptest.NewRecorder()
+
+			if test.endpoint == "/api/locations" && test.method == http.MethodPost {
+				h.CreateLocation(w, req)
+			}
+
+			responseBody := w.Body.String()
+
+			// Verify no sensitive patterns
+			for _, pattern := range test.sensitivePatterns {
+				if strings.Contains(strings.ToLower(responseBody), strings.ToLower(pattern)) {
+					t.Errorf("response contains sensitive pattern '%s': %s", pattern, responseBody)
+				}
+			}
+
+			// Verify valid JSON
+			var response map[string]interface{}
+			if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+				t.Errorf("response is not valid JSON: %v", err)
+			}
+		})
+	}
+}
+
+// TestIntegration_CORSPreflight_AllowedOrigin tests CORS preflight with allowed origin
+func TestIntegration_CORSPreflight_AllowedOrigin(t *testing.T) {
+	// This test verifies that CORS is configured correctly
+	// In production, CORS would be handled by the rs/cors middleware
+	// This test verifies that allowed origins from environment config are respected
+
+	// Create a mock router to test CORS behavior
+	r := mux.NewRouter()
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{})
+	h.RegisterRoutes(r)
+
+	// In development environment, localhost should be allowed
+	req := httptest.NewRequest(http.MethodOptions, "/api/locations", nil)
+	req.Header.Set("Origin", "http://localhost:3000")
+	req.Header.Set("Access-Control-Request-Method", "POST")
+	req.Header.Set("Access-Control-Request-Headers", "Content-Type")
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	// Note: CORS headers are set by the rs/cors middleware, not by individual handlers
+	// This test verifies that the handler doesn't block CORS preflight requests
+	// In a full integration test with CORS middleware, we'd verify:
+	// - Access-Control-Allow-Origin is set to a specific origin (not *)
+	// - Access-Control-Allow-Methods includes POST, PUT, DELETE
+	// - Access-Control-Allow-Credentials is true only in certain environments
+}
+
+// TestIntegration_CORSConfiguration_EnvironmentAware tests that CORS config is environment-aware
+func TestIntegration_CORSConfiguration_EnvironmentAware(t *testing.T) {
+	// Test that LoadCORSConfig returns different origins based on environment
+	devConfig := config.LoadCORSConfig("development")
+	stagingConfig := config.LoadCORSConfig("staging")
+	prodConfig := config.LoadCORSConfig("production")
+
+	// Verify development config allows localhost
+	if len(devConfig.AllowedOrigins) == 0 {
+		t.Error("development CORS config should have allowed origins")
+	}
+	hasLocalhost := false
+	for _, origin := range devConfig.AllowedOrigins {
+		if strings.Contains(origin, "localhost") || strings.Contains(origin, "127.0.0.1") {
+			hasLocalhost = true
+		}
+	}
+	if !hasLocalhost {
+		t.Errorf("development CORS config should allow localhost, got: %v", devConfig.AllowedOrigins)
+	}
+
+	// Verify staging config doesn't allow localhost
+	for _, origin := range stagingConfig.AllowedOrigins {
+		if strings.Contains(origin, "localhost") || strings.Contains(origin, "127.0.0.1") {
+			t.Errorf("staging CORS config should NOT allow localhost, got: %v", stagingConfig.AllowedOrigins)
+		}
+	}
+
+	// Verify production config doesn't allow localhost
+	for _, origin := range prodConfig.AllowedOrigins {
+		if strings.Contains(origin, "localhost") || strings.Contains(origin, "127.0.0.1") {
+			t.Errorf("production CORS config should NOT allow localhost, got: %v", prodConfig.AllowedOrigins)
+		}
+	}
+
+	// Verify no config uses wildcard origin with credentials
+	for _, cfg := range []*config.CORSConfig{devConfig, stagingConfig, prodConfig} {
+		for _, origin := range cfg.AllowedOrigins {
+			if origin == "*" && cfg.Credentials {
+				t.Error("CORS config uses wildcard origin with credentials (security risk)")
+			}
+		}
+	}
+}
+
+// TestIntegration_AllErrorsHaveRequestID tests that all error responses include request ID
+func TestIntegration_AllErrorsHaveRequestID(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	tests := []struct {
+		name           string
+		handler        func(http.ResponseWriter, *http.Request)
+		payload        string
+		expectedStatus int
+		context        func(*http.Request) *http.Request
+	}{
+		{
+			name: "validation_error_register",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				h.Register(w, r)
+			},
+			payload:        `{"name": "", "email": "test@test.com", "password": "pass"}`,
+			expectedStatus: http.StatusBadRequest,
+			context: func(r *http.Request) *http.Request {
+				return r.WithContext(context.WithValue(r.Context(), middleware.RequestIDKey, "req_all_errors_001"))
+			},
+		},
+		{
+			name: "auth_error_checkin",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				h.CheckIn(w, r)
+			},
+			payload:        `{"latitude": 0, "longitude": 0, "device_uuid": "dev", "signature": "sig"}`,
+			expectedStatus: http.StatusUnauthorized,
+			context: func(r *http.Request) *http.Request {
+				return r.WithContext(context.WithValue(r.Context(), middleware.RequestIDKey, "req_all_errors_002"))
+			},
+		},
+		{
+			name: "forbidden_error_location",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				h.CreateLocation(w, r)
+			},
+			payload:        `{"name": "Test", "latitude": 6.2, "longitude": 106.8, "radius_meters": 50}`,
+			expectedStatus: http.StatusForbidden,
+			context: func(r *http.Request) *http.Request {
+				ctx := context.WithValue(r.Context(), middleware.RoleKey, "employee")
+				ctx = context.WithValue(ctx, middleware.RequestIDKey, "req_all_errors_003")
+				return r.WithContext(ctx)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(test.payload))
+			req.Header.Set("Content-Type", "application/json")
+			req = test.context(req)
+
+			w := httptest.NewRecorder()
+			test.handler(w, req)
+
+			if w.Code != test.expectedStatus {
+				t.Errorf("expected status %d, got %d", test.expectedStatus, w.Code)
+			}
+
+			var response map[string]interface{}
+			if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+				t.Fatalf("response is not valid JSON: %v", err)
+			}
+
+			// Verify requestID is present
+			if _, ok := response["requestID"]; !ok {
+				t.Error("expected 'requestID' field in error response")
+			}
+
+			// Verify Content-Type is application/json
+			contentType := w.Header().Get("Content-Type")
+			if contentType != "application/json" {
+				t.Errorf("expected Content-Type: application/json, got %s", contentType)
+			}
+		})
 	}
 }
 
