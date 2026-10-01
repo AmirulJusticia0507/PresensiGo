@@ -5,24 +5,58 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
 	"github.com/PresensiGo/backend/internal/delivery/http/middleware"
 	"github.com/PresensiGo/backend/internal/model"
-	"github.com/PresensiGo/backend/internal/usecase"
 )
 
-type Handler struct {
-	authUc  *usecase.AuthUsecase
-	attUc   *usecase.AttendanceUsecase
+// AuthUsecaseIface defines the auth operations required by the HTTP handler.
+type AuthUsecaseIface interface {
+	Register(req *model.RegisterRequest) (*model.User, error)
+	Login(req *model.LoginRequest) (*model.LoginResponse, error)
+	GetByID(id uuid.UUID) (*model.User, error)
+	UpdateFaceEmbedding(userID uuid.UUID, embedding []byte) error
 }
 
-func NewHandler(authUc *usecase.AuthUsecase, attUc *usecase.AttendanceUsecase) *Handler {
+// AttendanceUsecaseIface defines the attendance operations required by the HTTP handler.
+type AttendanceUsecaseIface interface {
+	CheckIn(userID uuid.UUID, req *model.CheckInRequest) (*model.Attendance, error)
+	CheckOut(userID uuid.UUID, req *model.CheckOutRequest) (*model.Attendance, error)
+	GetTodayAttendance(userID uuid.UUID) (*model.Attendance, error)
+	GetHistory(userID uuid.UUID, limit, offset int) ([]model.AttendanceResponse, error)
+	GetLocations() ([]model.Location, error)
+	CreateLocation(req *model.Location) error
+	UpdateLocation(id uuid.UUID, req *model.Location) error
+	DeleteLocation(id uuid.UUID) error
+}
+
+type Handler struct {
+	authUc AuthUsecaseIface
+	attUc  AttendanceUsecaseIface
+}
+
+func NewHandler(authUc AuthUsecaseIface, attUc AttendanceUsecaseIface) *Handler {
 	return &Handler{
 		authUc: authUc,
 		attUc:  attUc,
 	}
+}
+
+var validate = validator.New()
+
+func validateRequest(w http.ResponseWriter, r *http.Request, dst interface{}) error {
+	if err := json.NewDecoder(r.Body).Decode(dst); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid request body")
+		return err
+	}
+	if err := validate.Struct(dst); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return err
+	}
+	return nil
 }
 
 func (h *Handler) RegisterRoutes(r *mux.Router) {
@@ -49,8 +83,7 @@ func (h *Handler) RegisterRoutes(r *mux.Router) {
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req model.RegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid request body")
+	if err := validateRequest(w, r, &req); err != nil {
 		return
 	}
 
@@ -68,8 +101,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req model.LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid request body")
+	if err := validateRequest(w, r, &req); err != nil {
 		return
 	}
 
@@ -90,8 +122,7 @@ func (h *Handler) CheckIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req model.CheckInRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid request body")
+	if err := validateRequest(w, r, &req); err != nil {
 		return
 	}
 
@@ -112,8 +143,7 @@ func (h *Handler) CheckOut(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req model.CheckOutRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid request body")
+	if err := validateRequest(w, r, &req); err != nil {
 		return
 	}
 
