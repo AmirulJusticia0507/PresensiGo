@@ -3,8 +3,6 @@
 ## Overview
 Migrate token storage from SharedPreferences to flutter_secure_storage, implement session lifecycle, handle token expiry, and secure biometric login. 6 main implementation tasks.
 
-## Implementation Plan
-
 ### Phase 1: Secure Storage Foundation (Task 1-2)
 - Create SecureStorageService with encrypted storage
 - Implement SessionManager with token expiry validation
