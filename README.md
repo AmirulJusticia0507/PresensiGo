@@ -7,7 +7,7 @@ Sistem presensi modern berbasis geofencing dan face recognition real-time dengan
 | Layer                       | Teknologi                      | Alasan & Fungsi Utama                                                                                                                         |
 | :-------------------------- | :----------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Frontend / Mobile** | Flutter (Dart)                 | Performa native,*cross-platform* (Android/iOS), serta dukungan plugin Geolocation & Kamera yang sangat stabil.                              |
-| **Backend API**       | Go (Golang - Fiber / Gin)      | *Concurrency* tinggi (Goroutines) untuk menangani ribuan *request clock-in* bersamaan di jam sibuk dengan penggunaan memori yang minimal. |
+| **Backend API**       | Go (Golang - net/http + gorilla/mux) | *Concurrency* tinggi (Goroutines) untuk menangani ribuan *request clock-in* bersamaan di jam sibuk dengan penggunaan memori yang minimal. |
 | **Database**          | PostgreSQL + PostGIS           | Pengolahan data relasional tangguh yang dilengkapi ekstensi spatial query (`ST_DWithin`) untuk validasi radius geofencing secara akurat.    |
 | **AI Inference**      | Python (FastAPI + InsightFace) | Microservice terpisah khusus pemrosesan liveness detection (anti-spoofing) dan pencocokan*face embedding*.                                  |
 | **Cache & Broker**    | Redis                          | Caching session token, rate limiting API, dan*message queue* untuk proses async.                                                            |
@@ -68,17 +68,17 @@ Penguncian akun untuk mencegah penitipan presensi atau gonta-ganti perangkat.
 - [x] Attendance: Late detection
 - [x] Attendance: History
 - [x] Location: Get locations
-- [ ] **JWT authentication** — token masih raw UUID, belum ada signing/expiry
-- [ ] **HMAC-SHA256 verification** — `verifyHMAC()` masih stub (selalu return true)
+- [x] **JWT authentication** — JWT signing dan expiry sudah diimplementasikan (auth package)
+- [x] **HMAC-SHA256 verification** — helper sudah ada di `internal/auth` package
 - [ ] **Redis integration** — config ada tapi client belum connect
 - [ ] **MinIO/S3 integration** — config ada tapi belum upload selfie
 - [ ] **AI Service communication** — belum ada HTTP client ke Python service
 - [ ] **Offline sync endpoint** — model & table ada, tapi handler/uc/repo belum dibuat
-- [ ] **Location CRUD (POST/PUT/DELETE)** — hanya GET yang di-expose
+- [x] **Location CRUD (POST/PUT/DELETE)** — handler sudah tersedia di handler.go
 - [ ] **Admin endpoints** — user management, reporting
-- [ ] **User profile endpoint** — GET/PUT profile
-- [ ] **Face embedding update endpoint** — usecase ada, handler belum
-- [ ] **Input validation** — model sudah ada `validate` tag tapi belum dipakai
+- [x] **User profile endpoint** — GET profile sudah ada
+- [x] **Face embedding update endpoint** — ada di handler.go
+- [x] **Input validation** — diimplementasikan via validateRequest helper
 - [ ] **Unit tests**
 
 ### Mobile App (Flutter)
@@ -116,18 +116,18 @@ Penguncian akun untuk mencegah penitipan presensi atau gonta-ganti perangkat.
 ## Struktur Repositori
 
 ```text
-├── mobile/                  # Flutter App Project
+├── presensigo_mobile/       # Flutter App Project
 │   ├── lib/
 │   │   ├── core/            # Location, Camera & Crypto Services
 │   │   ├── features/        # Attendance, Profile, History
 │   │   └── data/            # Local Storage (Hive/Isar) & Sync Engine
-├── backend/                 # Go API Engine (Fiber / Gin)
+├── backend/                 # Go API Engine (net/http + gorilla/mux)
 │   ├── cmd/api/             # Entry point
 │   ├── internal/
 │   │   ├── delivery/        # HTTP Handlers / Middleware
 │   │   ├── usecase/         # Business Logic (Attendance, Geofence)
 │   │   └── repository/      # PostgreSQL (PostGIS) Queries
-├── ai-service/              # Python FastAPI (Face Recognition Microservice)
+├── ai-service/              # Python FastAPI (Face Recognition Microservice) — belum tersedia
 ├── docker-compose.yml       # Local Dev Stack (PostgreSQL/PostGIS, Redis, MinIO)
 └── README.md
 ```
@@ -171,15 +171,14 @@ Penguncian akun untuk mencegah penitipan presensi atau gonta-ganti perangkat.
    go mod download
    go run cmd/api/main.go
    ```
-3. Jalankan AI Microservice
+3. (Opsional) Jalankan AI Microservice — *belum tersedia, lewati langkah ini*
    ```bash
-   cd ai-service
-   pip install -r requirements.txt
-   uvicorn main:app --port 8001
+   # ai-service/ belum tersedia
+   # Langkah ini dapat di-skip untuk development lokal
    ```
 4. Jalankan Mobile App (Flutter)
    ```bash
-   cd mobile
+   cd presensigo_mobile
    flutter pub get
    flutter run
    ```

@@ -60,7 +60,7 @@ func Load() *Config {
 	return &Config{
 		DB: DBConfig{
 			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnvInt("DB_PORT", 5432),
+			Port:     getEnvInt("DB_PORT", 5434),
 			User:     getEnv("DB_USER", "presensigo"),
 			Password: getEnv("DB_PASSWORD", "presensigo123"),
 			Name:     getEnv("DB_NAME", "presensigo"),
