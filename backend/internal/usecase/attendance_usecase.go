@@ -1,12 +1,17 @@
 package usecase
 
 import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/PresensiGo/backend/internal/ai"
 	"github.com/PresensiGo/backend/internal/auth"
 	"github.com/PresensiGo/backend/internal/config"
 	"github.com/PresensiGo/backend/internal/model"
@@ -19,14 +24,18 @@ type AttendanceUsecase struct {
 	userRepo *repository.UserRepository
 	config   *config.Config
 	minio    *storage.Client
+	faceAI   *ai.Client
 }
 
-func NewAttendanceUsecase(attRepo *repository.AttendanceRepository, userRepo *repository.UserRepository, cfg *config.Config, minio *storage.Client) *AttendanceUsecase {
+const maxSelfieSize = 1024 * 1024
+
+func NewAttendanceUsecase(attRepo *repository.AttendanceRepository, userRepo *repository.UserRepository, cfg *config.Config, minio *storage.Client, faceAI *ai.Client) *AttendanceUsecase {
 	return &AttendanceUsecase{
 		attRepo:  attRepo,
 		userRepo: userRepo,
 		config:   cfg,
 		minio:    minio,
+		faceAI:   faceAI,
 	}
 }
 
@@ -74,6 +83,39 @@ func (u *AttendanceUsecase) CheckIn(userID uuid.UUID, req *model.CheckInRequest)
 		return nil, errors.New("already checked in today")
 	}
 
+	if req.SelfieData == "" {
+		return nil, errors.New("selfie is required for check-in")
+	}
+	if err := auth.VerifyFaceChallenge(req.LivenessToken, req.LivenessChallenge, userID, u.config.JWT.Secret); err != nil {
+		return nil, err
+	}
+	if len(user.FaceEmbedding) == 0 {
+		return nil, errors.New("face is not enrolled; enroll it from Settings before check-in")
+	}
+	var enrolledEmbedding []float32
+	if err := json.Unmarshal(user.FaceEmbedding, &enrolledEmbedding); err != nil || len(enrolledEmbedding) != 512 {
+		return nil, errors.New("stored face enrollment is invalid; please enroll again")
+	}
+	if u.faceAI == nil {
+		return nil, errors.New("face recognition service is unavailable")
+	}
+	verification, err := u.faceAI.Verify(
+		context.Background(),
+		req.SelfieData,
+		enrolledEmbedding,
+		req.LivenessChallenge,
+		user.FaceSimilarityThreshold,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if !verification.LivenessPassed {
+		return nil, errors.New("liveness check failed; follow the head-turn instruction and retry")
+	}
+	if !verification.Verified {
+		return nil, fmt.Errorf("face verification failed (similarity %.3f, required %.3f)", verification.Similarity, verification.Threshold)
+	}
+
 	now := time.Now()
 	isLate := now.Hour() >= 9
 
@@ -90,21 +132,69 @@ func (u *AttendanceUsecase) CheckIn(userID uuid.UUID, req *model.CheckInRequest)
 		Synced:          true,
 	}
 
+	var uploadedObject string
 	if req.SelfieData != "" {
-		// Upload selfie to MinIO (or generate URL if MinIO not available)
-		objectName := "selfies/" + att.ID.String() + ".jpg"
-		if u.minio != nil {
-			// TODO: Actual MinIO upload when client is properly configured
-			_ = u.minio
+		image, contentType, extension, err := decodeSelfie(req.SelfieData)
+		if err != nil {
+			return nil, err
 		}
-		att.SelfieURL = &objectName
+		if u.minio == nil {
+			return nil, errors.New("selfie storage is unavailable")
+		}
+
+		uploadedObject = fmt.Sprintf(
+			"selfies/%s/%d-%s.%s",
+			userID,
+			time.Now().UnixMilli(),
+			att.ID,
+			extension,
+		)
+		selfieURL, err := u.minio.PutImage(context.Background(), uploadedObject, contentType, image)
+		if err != nil {
+			return nil, err
+		}
+		att.SelfieURL = &selfieURL
 	}
 
 	if err := u.attRepo.CreateCheckIn(att); err != nil {
+		if uploadedObject != "" {
+			_ = u.minio.RemoveObject(context.Background(), uploadedObject)
+		}
 		return nil, err
 	}
 
 	return att, nil
+}
+
+func (u *AttendanceUsecase) GetFaceChallenge(userID uuid.UUID) (*model.FaceChallengeResponse, error) {
+	challenge, token, expiresAt, err := auth.NewFaceChallenge(userID, u.config.JWT.Secret)
+	if err != nil {
+		return nil, errors.New("failed to create liveness challenge")
+	}
+	return &model.FaceChallengeResponse{Challenge: challenge, Token: token, ExpiresAt: expiresAt}, nil
+}
+
+func decodeSelfie(encoded string) ([]byte, string, string, error) {
+	if comma := strings.IndexByte(encoded, ','); strings.HasPrefix(encoded, "data:") && comma >= 0 {
+		encoded = encoded[comma+1:]
+	}
+
+	image, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil, "", "", errors.New("selfie must be valid base64")
+	}
+	if len(image) == 0 || len(image) > maxSelfieSize {
+		return nil, "", "", fmt.Errorf("selfie must be between 1 byte and %d bytes", maxSelfieSize)
+	}
+
+	if len(image) >= 3 && image[0] == 0xff && image[1] == 0xd8 && image[2] == 0xff {
+		return image, "image/jpeg", "jpg", nil
+	}
+	pngHeader := []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}
+	if len(image) >= len(pngHeader) && string(image[:len(pngHeader)]) == string(pngHeader) {
+		return image, "image/png", "png", nil
+	}
+	return nil, "", "", errors.New("selfie format must be JPEG or PNG")
 }
 
 func (u *AttendanceUsecase) CheckOut(userID uuid.UUID, req *model.CheckOutRequest) (*model.Attendance, error) {

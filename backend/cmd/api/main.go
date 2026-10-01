@@ -14,6 +14,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/rs/cors"
 
+	"github.com/PresensiGo/backend/internal/ai"
 	"github.com/PresensiGo/backend/internal/config"
 	deliveryhttp "github.com/PresensiGo/backend/internal/delivery/http"
 	"github.com/PresensiGo/backend/internal/delivery/http/middleware"
@@ -47,10 +48,27 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	attRepo := repository.NewAttendanceRepository(db)
 
-	minioClient, _ := storage.NewClient(cfg.MinIO.Endpoint, cfg.MinIO.AccessKey, cfg.MinIO.SecretKey, cfg.MinIO.UseSSL)
+	minioCtx, cancelMinio := context.WithTimeout(context.Background(), 10*time.Second)
+	minioClient, err := storage.NewClient(
+		minioCtx,
+		cfg.MinIO.Endpoint,
+		cfg.MinIO.AccessKey,
+		cfg.MinIO.SecretKey,
+		cfg.MinIO.Bucket,
+		cfg.MinIO.UseSSL,
+	)
+	cancelMinio()
+	if err != nil {
+		log.Fatalf("Failed to initialize MinIO: %v", err)
+	}
+	log.Printf("Connected to MinIO bucket %q", cfg.MinIO.Bucket)
 
-	authUc := usecase.NewAuthUsecase(userRepo, cfg)
-	attUc := usecase.NewAttendanceUsecase(attRepo, userRepo, cfg, minioClient)
+	faceAI := ai.NewClient(
+		cfg.AI.URL,
+		time.Duration(cfg.AI.TimeoutSeconds)*time.Second,
+	)
+	authUc := usecase.NewAuthUsecase(userRepo, cfg, faceAI)
+	attUc := usecase.NewAttendanceUsecase(attRepo, userRepo, cfg, minioClient, faceAI)
 
 	httpHandler := deliveryhttp.NewHandler(authUc, attUc, db, redisClient)
 
@@ -60,6 +78,9 @@ func main() {
 	rateLimiter := middleware.NewRateLimiter(redisClient)
 
 	r := mux.NewRouter()
+
+	// Apply global middleware stack
+	r.Use(middleware.RequestIDMiddleware)
 
 	// Health check endpoints (public, no auth, no rate limit)
 	r.HandleFunc("/health", httpHandler.Health).Methods("GET")
@@ -97,7 +118,8 @@ func main() {
 	defaultLimitRouter.HandleFunc("/api/locations/{id}", httpHandler.UpdateLocation).Methods("PUT")
 	defaultLimitRouter.HandleFunc("/api/locations/{id}", httpHandler.DeleteLocation).Methods("DELETE")
 	defaultLimitRouter.HandleFunc("/api/profile", httpHandler.GetProfile).Methods("GET")
-	defaultLimitRouter.HandleFunc("/api/profile/face-embedding", httpHandler.UpdateFaceEmbedding).Methods("PUT")
+	defaultLimitRouter.HandleFunc("/api/profile/face-enrollment", httpHandler.EnrollFace).Methods("POST")
+	defaultLimitRouter.HandleFunc("/api/face/challenge", httpHandler.GetFaceChallenge).Methods("POST")
 
 	port := cfg.Server.Port
 	if port == "" {

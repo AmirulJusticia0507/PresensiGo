@@ -1,11 +1,14 @@
 package usecase
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/PresensiGo/backend/internal/ai"
 	"github.com/PresensiGo/backend/internal/auth"
 	"github.com/PresensiGo/backend/internal/config"
 	"github.com/PresensiGo/backend/internal/model"
@@ -16,14 +19,31 @@ type AuthUsecase struct {
 	userRepo   *repository.UserRepository
 	config     *config.Config
 	jwtService *auth.JWTService
+	faceAI     *ai.Client
 }
 
-func NewAuthUsecase(userRepo *repository.UserRepository, cfg *config.Config) *AuthUsecase {
+func NewAuthUsecase(userRepo *repository.UserRepository, cfg *config.Config, faceAI *ai.Client) *AuthUsecase {
 	return &AuthUsecase{
 		userRepo:   userRepo,
 		config:     cfg,
 		jwtService: auth.NewJWTService(cfg.JWT.Secret, cfg.JWT.ExpireHour),
+		faceAI:     faceAI,
 	}
+}
+
+func (u *AuthUsecase) EnrollFace(ctx context.Context, userID uuid.UUID, selfies []string) error {
+	if u.faceAI == nil {
+		return errors.New("face recognition service is unavailable")
+	}
+	embedding, err := u.faceAI.Enroll(ctx, selfies)
+	if err != nil {
+		return err
+	}
+	encoded, err := json.Marshal(embedding)
+	if err != nil {
+		return errors.New("failed to encode face embedding")
+	}
+	return u.userRepo.UpdateFaceEmbedding(userID, encoded)
 }
 
 func (u *AuthUsecase) Register(req *model.RegisterRequest) (*model.User, error) {
@@ -38,11 +58,12 @@ func (u *AuthUsecase) Register(req *model.RegisterRequest) (*model.User, error) 
 	}
 
 	user := &model.User{
-		ID:           uuid.New(),
-		Name:         req.Name,
-		Email:        req.Email,
-		PasswordHash: string(hashedPassword),
-		Role:         "employee",
+		ID:                      uuid.New(),
+		Name:                    req.Name,
+		Email:                   req.Email,
+		PasswordHash:            string(hashedPassword),
+		Role:                    "employee",
+		FaceSimilarityThreshold: u.config.AI.SimilarityThreshold,
 	}
 
 	if err := u.userRepo.Create(user); err != nil {

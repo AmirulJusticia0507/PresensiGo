@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -19,6 +23,8 @@ class AttendanceScreen extends StatefulWidget {
 }
 
 class _AttendanceScreenState extends State<AttendanceScreen> {
+  static const int _maxSelfieBytes = 1024 * 1024;
+
   Position? _currentPosition;
   bool _isCheckedIn = false;
   bool _isLoading = true;
@@ -65,6 +71,33 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     if (confirmedPosition == null) return; // User cancelled
 
+    final challenge = await ApiService.getFaceChallenge();
+    if (challenge['success'] != true) {
+      _showError(challenge['message'] as String);
+      return;
+    }
+    if (!mounted) return;
+    final challengeName = challenge['challenge'] as String;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Liveness check'),
+        content: Text(
+          challengeName == 'turn_left'
+              ? 'Turn your head slightly to the left, then take the selfie.'
+              : 'Turn your head slightly to the right, then take the selfie.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Open camera'),
+          ),
+        ],
+      ),
+    );
+    final selfieData = await _captureSelfie();
+    if (selfieData == null) return;
+
     setState(() => _isProcessing = true);
 
     final timestamp = CryptoHelper.getCurrentTimestamp();
@@ -83,6 +116,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       deviceUuid: _deviceUuid,
       timestamp: timestamp,
       hmacSignature: hmac,
+      selfieData: selfieData,
+      livenessChallenge: challengeName,
+      livenessToken: challenge['token'] as String,
     );
 
     setState(() => _isProcessing = false);
@@ -93,6 +129,73 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     } else {
       _showError(result['message']);
     }
+  }
+
+  Future<String?> _captureSelfie() async {
+    while (mounted) {
+      final photo = await ImagePicker().pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.front,
+        maxWidth: 500,
+        maxHeight: 500,
+        imageQuality: 70,
+      );
+      if (photo == null) return null;
+
+      final bytes = await photo.readAsBytes();
+      if (!_isJpegOrPng(bytes)) {
+        _showError('Selfie must be a JPEG or PNG image.');
+        continue;
+      }
+      if (bytes.length > _maxSelfieBytes) {
+        _showError('Selfie is still larger than 1 MB. Please retake it.');
+        continue;
+      }
+      if (!mounted) return null;
+
+      final accepted = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Use this selfie?'),
+          content: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.memory(bytes, height: 280, fit: BoxFit.cover),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Retake'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Use selfie'),
+            ),
+          ],
+        ),
+      );
+      if (accepted == true) return base64Encode(bytes);
+    }
+    return null;
+  }
+
+  bool _isJpegOrPng(Uint8List bytes) {
+    final isJpeg =
+        bytes.length >= 3 &&
+        bytes[0] == 0xff &&
+        bytes[1] == 0xd8 &&
+        bytes[2] == 0xff;
+    final isPng =
+        bytes.length >= 8 &&
+        bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4e &&
+        bytes[3] == 0x47 &&
+        bytes[4] == 0x0d &&
+        bytes[5] == 0x0a &&
+        bytes[6] == 0x1a &&
+        bytes[7] == 0x0a;
+    return isJpeg || isPng;
   }
 
   Future<void> _checkOut() async {

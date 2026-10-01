@@ -2,7 +2,6 @@ package http
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -23,6 +22,7 @@ type AuthUsecaseIface interface {
 	Login(req *model.LoginRequest) (*model.LoginResponse, error)
 	GetByID(id uuid.UUID) (*model.User, error)
 	UpdateFaceEmbedding(userID uuid.UUID, embedding []byte) error
+	EnrollFace(ctx context.Context, userID uuid.UUID, selfies []string) error
 }
 
 // AttendanceUsecaseIface defines the attendance operations required by the HTTP handler.
@@ -35,6 +35,7 @@ type AttendanceUsecaseIface interface {
 	CreateLocation(req *model.Location) error
 	UpdateLocation(id uuid.UUID, req *model.Location) error
 	DeleteLocation(id uuid.UUID) error
+	GetFaceChallenge(userID uuid.UUID) (*model.FaceChallengeResponse, error)
 }
 
 // RedisClientIface defines the Redis operations required by the HTTP handler.
@@ -46,39 +47,70 @@ type RedisClientIface interface {
 	Delete(ctx context.Context, keys ...string) error
 }
 
+type DBPinger interface {
+	Ping() error
+}
+
 type Handler struct {
 	authUc      AuthUsecaseIface
 	attUc       AttendanceUsecaseIface
-	db          *sql.DB
+	db          DBPinger
 	redisClient RedisClientIface
 }
 
-func NewHandler(authUc AuthUsecaseIface, attUc AttendanceUsecaseIface, db *sql.DB, redisClient RedisClientIface) *Handler {
-	return &Handler{
-		authUc:      authUc,
-		attUc:       attUc,
-		db:          db,
-		redisClient: redisClient,
+func NewHandler(authUc AuthUsecaseIface, attUc AttendanceUsecaseIface, dependencies ...any) *Handler {
+	handler := &Handler{authUc: authUc, attUc: attUc}
+	if len(dependencies) > 0 {
+		handler.db, _ = dependencies[0].(DBPinger)
 	}
+	if len(dependencies) > 1 {
+		handler.redisClient, _ = dependencies[1].(RedisClientIface)
+	}
+	return handler
 }
 
 var validate = validator.New()
 
 func validateRequest(w http.ResponseWriter, r *http.Request, dst interface{}) error {
 	if err := json.NewDecoder(r.Body).Decode(dst); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid request body")
+		requestID := middleware.GetRequestID(r.Context())
+		log.Printf("[%s] Failed to decode request body: %v", requestID, err)
+		respondValidationError(w, r.Context(), "Invalid request format", nil)
 		return err
 	}
 	if err := validate.Struct(dst); err != nil {
-		respondError(w, http.StatusBadRequest, err.Error())
+		requestID := middleware.GetRequestID(r.Context())
+		details := middleware.SanitizeValidationErrors(err)
+		log.Printf("[%s] Validation failed: %v", requestID, err)
+		respondValidationError(w, r.Context(), "Validation failed", details)
 		return err
 	}
 	return nil
 }
 
+// respondValidationError sends a sanitized validation error response
+func respondValidationError(w http.ResponseWriter, ctx context.Context, errorMsg string, details []string) {
+	requestID := middleware.GetRequestID(ctx)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusBadRequest)
+
+	response := map[string]interface{}{
+		"error":     errorMsg,
+		"requestID": requestID,
+	}
+
+	if len(details) > 0 {
+		response["details"] = details
+	}
+
+	json.NewEncoder(w).Encode(response)
+}
+
 // Health returns liveness check - simple ok response
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Health check request from %s", r.RemoteAddr)
+	requestID := middleware.GetRequestID(r.Context())
+	log.Printf("[%s] Health check request from %s", requestID, r.RemoteAddr)
 	respondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
@@ -126,10 +158,12 @@ func (h *Handler) RegisterRoutes(r *mux.Router) {
 
 	// User profile route
 	r.HandleFunc("/api/profile", h.GetProfile).Methods("GET")
-	r.HandleFunc("/api/profile/face-embedding", h.UpdateFaceEmbedding).Methods("PUT")
+	r.HandleFunc("/api/profile/face-enrollment", h.EnrollFace).Methods("POST")
+	r.HandleFunc("/api/face/challenge", h.GetFaceChallenge).Methods("POST")
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
 	var req model.RegisterRequest
 	if err := validateRequest(w, r, &req); err != nil {
 		return
@@ -137,6 +171,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.authUc.Register(&req)
 	if err != nil {
+		log.Printf("[%s] Registration failed: %v", requestID, err)
 		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -155,6 +190,8 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.authUc.Login(&req)
 	if err != nil {
+		requestID := middleware.GetRequestID(r.Context())
+		log.Printf("[%s] Login failed: invalid credentials for email %s", requestID, req.Email)
 		respondError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
@@ -165,10 +202,14 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CheckIn(w http.ResponseWriter, r *http.Request) {
 	userID := getUserIDFromContext(r)
 	if userID == uuid.Nil {
+		requestID := middleware.GetRequestID(r.Context())
+		log.Printf("[%s] Unauthorized check-in attempt", requestID)
 		respondError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
+	// A 1 MB image grows by roughly 33% when base64 encoded.
+	r.Body = http.MaxBytesReader(w, r.Body, 2<<20)
 	var req model.CheckInRequest
 	if err := validateRequest(w, r, &req); err != nil {
 		return
@@ -176,6 +217,8 @@ func (h *Handler) CheckIn(w http.ResponseWriter, r *http.Request) {
 
 	att, err := h.attUc.CheckIn(userID, &req)
 	if err != nil {
+		requestID := middleware.GetRequestID(r.Context())
+		log.Printf("[%s] Check-in failed for user %s: %v", requestID, userID, err)
 		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -262,7 +305,48 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusOK, user)
+	respondJSON(w, http.StatusOK, map[string]any{
+		"id":                        user.ID,
+		"name":                      user.Name,
+		"email":                     user.Email,
+		"role":                      user.Role,
+		"device_uuid":               user.DeviceUUID,
+		"face_enrolled":             len(user.FaceEmbedding) > 0,
+		"face_enrolled_at":          user.FaceEnrolledAt,
+		"face_similarity_threshold": user.FaceSimilarityThreshold,
+	})
+}
+
+func (h *Handler) EnrollFace(w http.ResponseWriter, r *http.Request) {
+	userID := getUserIDFromContext(r)
+	if userID == uuid.Nil {
+		respondError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 5<<20)
+	var req model.EnrollFaceRequest
+	if err := validateRequest(w, r, &req); err != nil {
+		return
+	}
+	if err := h.authUc.EnrollFace(r.Context(), userID, req.Selfies); err != nil {
+		respondError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]any{"message": "face enrollment completed", "samples": len(req.Selfies)})
+}
+
+func (h *Handler) GetFaceChallenge(w http.ResponseWriter, r *http.Request) {
+	userID := getUserIDFromContext(r)
+	if userID == uuid.Nil {
+		respondError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	challenge, err := h.attUc.GetFaceChallenge(userID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	respondJSON(w, http.StatusOK, challenge)
 }
 
 func (h *Handler) UpdateFaceEmbedding(w http.ResponseWriter, r *http.Request) {
@@ -360,9 +444,14 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(data)
 }
-
 func respondError(w http.ResponseWriter, status int, message string) {
 	respondJSON(w, status, map[string]string{"error": message})
+}
+
+// respondWithError uses the centralized error handler for consistent error responses
+func (h *Handler) respondWithError(w http.ResponseWriter, r *http.Request, err error) {
+	requestID := middleware.GetRequestID(r.Context())
+	middleware.HandleError(w, err, requestID)
 }
 
 func getUserIDFromContext(r *http.Request) uuid.UUID {

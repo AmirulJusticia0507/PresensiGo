@@ -11,6 +11,8 @@ CREATE TABLE users (
     role VARCHAR(20) NOT NULL DEFAULT 'employee' CHECK (role IN ('admin', 'employee')),
     device_uuid VARCHAR(255) UNIQUE,
     face_embedding BYTEA,
+    face_similarity_threshold DECIMAL(4, 3) NOT NULL DEFAULT 0.450,
+    face_enrolled_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

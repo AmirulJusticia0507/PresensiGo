@@ -71,8 +71,8 @@ Penguncian akun untuk mencegah penitipan presensi atau gonta-ganti perangkat.
 - [x] **JWT authentication** — JWT signing dan expiry sudah diimplementasikan (auth package)
 - [x] **HMAC-SHA256 verification** — helper sudah ada di `internal/auth` package
 - [ ] **Redis integration** — config ada tapi client belum connect
-- [ ] **MinIO/S3 integration** — config ada tapi belum upload selfie
-- [ ] **AI Service communication** — belum ada HTTP client ke Python service
+- [x] **MinIO/S3 integration** — bucket otomatis dibuat, selfie diunggah, dan signed URL disimpan pada presensi
+- [x] **AI Service communication** — Go client dengan timeout untuk enrollment dan verification
 - [ ] **Offline sync endpoint** — model & table ada, tapi handler/uc/repo belum dibuat
 - [x] **Location CRUD (POST/PUT/DELETE)** — handler sudah tersedia di handler.go
 - [ ] **Admin endpoints** — user management, reporting
@@ -92,24 +92,27 @@ Penguncian akun untuk mencegah penitipan presensi atau gonta-ganti perangkat.
 - [x] HMAC-SHA256 signature generation
 - [x] Theme (Material 3)
 - [ ] **Offline-first sync engine** — Hive ada di pubspec tapi belum dipakai
-- [ ] **Camera / selfie capture** — dependency ada tapi belum dipakai
-- [ ] **Face recognition UI** — belum ada screen verifikasi wajah
+- [x] **Camera / selfie capture** — kamera depan, resize 500x500, preview, dan validasi ukuran/format
+- [x] **Face recognition UI** — enrollment tiga selfie dan liveness head-turn saat check-in
 - [ ] **Provider state management** — dependency ada tapi belum dipakai
 - [ ] **flutter_secure_storage** — token masih di SharedPreferences biasa
 - [ ] **Register screen** — API method ada, UI belum
 - [ ] **Profile screen**
 - [ ] **Mock GPS detection** — belum ada kode
 - [ ] **Auto-login / splash screen** — belum ada session persistence check
-- [ ] **Error handling & retry logic**
+- [x] **Error handling & retry logic** — upload check-in diulang dengan exponential backoff
 - [ ] **Unit tests**
 
 ### AI Service (Python)
-- [ ] **Belum ada sama sekali** — belum ada directory `ai-service/`
-- [ ] FastAPI server setup
-- [ ] InsightFace integration (face embedding)
-- [ ] Liveness detection (anti-spoofing)
-- [ ] Cosine similarity matching
-- [ ] gRPC/HTTP endpoint untuk Go backend
+- [x] FastAPI server setup
+- [x] InsightFace integration (512-d face embedding)
+- [x] Challenge-response head-turn liveness baseline
+- [x] Cosine similarity matching dengan threshold configurable
+- [x] HTTP enrollment dan verification endpoint
+
+> **Lisensi model:** kode InsightFace berlisensi MIT, tetapi model pretrained
+> `buffalo_l` hanya untuk riset non-komersial. Deployment komersial harus memakai
+> model berlisensi komersial/mandiri atau memperoleh lisensi dari InsightFace.
 
 ---
 
@@ -161,6 +164,12 @@ Penguncian akun untuk mencegah penitipan presensi atau gonta-ganti perangkat.
 
 ## Quick Start (Local Setup)
 
+Untuk database yang sudah dibuat sebelum Milestone 3.2, jalankan migrasi
+`backend/migrations/002_face_recognition.sql` satu kali. Konfigurasi opsional:
+`AI_SERVICE_URL` (default `http://localhost:8000`), `AI_TIMEOUT_SECONDS` (default `15`),
+dan `FACE_SIMILARITY_THRESHOLD` (default `0.45`). Threshold disalin ke profil user saat
+registrasi agar penyesuaian per user tercatat di database.
+
 1. Jalankan Dependencies (Database & Storage)
    ```bash
    docker-compose up -d
@@ -171,10 +180,9 @@ Penguncian akun untuk mencegah penitipan presensi atau gonta-ganti perangkat.
    go mod download
    go run cmd/api/main.go
    ```
-3. (Opsional) Jalankan AI Microservice — *belum tersedia, lewati langkah ini*
+3. Tunggu AI service sehat. Model InsightFace diunduh pada startup pertama:
    ```bash
-   # ai-service/ belum tersedia
-   # Langkah ini dapat di-skip untuk development lokal
+   docker-compose ps
    ```
 4. Jalankan Mobile App (Flutter)
    ```bash

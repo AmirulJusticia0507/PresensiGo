@@ -1,6 +1,8 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../core/constants/api_constants.dart';
 import '../models/user_model.dart';
 import '../models/attendance_model.dart';
@@ -20,7 +22,7 @@ class ApiService {
     // First try to get from secure storage
     _token = await _secureStorage.getToken();
     if (_token != null) return _token;
-    
+
     // Fallback to SharedPreferences for migration
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString('token');
@@ -59,6 +61,7 @@ class ApiService {
     }
     // Token invalid or expired - clear it and notify
     await _sessionManager.handleUnauthorized();
+    await _clearToken();
     return null;
   }
 
@@ -94,18 +97,17 @@ class ApiService {
     final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}${ApiConstants.authRegister}'),
       headers: await _headers(),
-      body: jsonEncode({
-        'name': name,
-        'email': email,
-        'password': password,
-      }),
+      body: jsonEncode({'name': name, 'email': email, 'password': password}),
     );
 
     final data = jsonDecode(response.body);
     if (response.statusCode == 201) {
       return {'success': true};
     }
-    return {'success': false, 'message': data['error'] ?? 'Registration failed'};
+    return {
+      'success': false,
+      'message': data['error'] ?? 'Registration failed',
+    };
   }
 
   static Future<void> logout() async {
@@ -118,9 +120,10 @@ class ApiService {
     } catch (e) {
       // Ignore errors; local logout always succeeds
     }
-    
+
     // Clear all credentials and session state
     await _sessionManager.logout();
+    await _clearToken();
   }
 
   /// Handle 401 responses and return false if session expired
@@ -128,6 +131,7 @@ class ApiService {
     if (response.statusCode == 401) {
       // Token expired or invalid
       await _sessionManager.handleUnauthorized();
+      await _clearToken();
       return false;
     }
     return true;
@@ -147,9 +151,14 @@ class ApiService {
     return null;
   }
 
-  static Future<List<AttendanceModel>> getHistory({int limit = 10, int offset = 0}) async {
+  static Future<List<AttendanceModel>> getHistory({
+    int limit = 10,
+    int offset = 0,
+  }) async {
     final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendanceHistory}?limit=$limit&offset=$offset'),
+      Uri.parse(
+        '${ApiConstants.baseUrl}${ApiConstants.attendanceHistory}?limit=$limit&offset=$offset',
+      ),
       headers: await _headers(),
     );
 
@@ -168,30 +177,102 @@ class ApiService {
     required String deviceUuid,
     required int timestamp,
     required String hmacSignature,
-    String? selfieData,
+    required String selfieData,
+    required String livenessChallenge,
+    required String livenessToken,
   }) async {
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendanceCheckIn}'),
-      headers: await _headers(),
-      body: jsonEncode({
-        'latitude': latitude,
-        'longitude': longitude,
-        'device_uuid': deviceUuid,
-        'timestamp': timestamp,
-        'hmac_signature': hmacSignature,
-        if (selfieData != null) 'selfie_data': selfieData,
-      }),
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}${ApiConstants.attendanceCheckIn}',
     );
+    final body = jsonEncode({
+      'latitude': latitude,
+      'longitude': longitude,
+      'device_uuid': deviceUuid,
+      'timestamp': timestamp,
+      'hmac_signature': hmacSignature,
+      'selfie_data': selfieData,
+      'liveness_challenge': livenessChallenge,
+      'liveness_token': livenessToken,
+    });
 
-    if (!await _handleResponse(response)) {
-      return {'success': false, 'message': 'Session expired, please log in again'};
+    http.Response? response;
+    Object? lastError;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        response = await http
+            .post(uri, headers: await _headers(), body: body)
+            .timeout(const Duration(seconds: 30));
+        if (response.statusCode < 500) break;
+      } catch (error) {
+        lastError = error;
+      }
+
+      if (attempt < 2) {
+        await Future<void>.delayed(Duration(seconds: 1 << attempt));
+      }
     }
 
-    final data = jsonDecode(response.body);
+    if (response == null) {
+      return {
+        'success': false,
+        'message': 'Unable to upload selfie. Please try again. ($lastError)',
+      };
+    }
+
+    if (!await _handleResponse(response)) {
+      return {
+        'success': false,
+        'message': 'Session expired, please log in again',
+      };
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200) {
       return {'success': true, 'attendance': AttendanceModel.fromJson(data)};
     }
     return {'success': false, 'message': data['error'] ?? 'Check-in failed'};
+  }
+
+  static Future<Map<String, dynamic>> getFaceChallenge() async {
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.faceChallenge}'),
+      headers: await _headers(),
+    );
+    if (!await _handleResponse(response)) {
+      return {'success': false, 'message': 'Session expired'};
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode == 200) return {'success': true, ...data};
+    return {
+      'success': false,
+      'message': data['error'] ?? 'Unable to create liveness challenge',
+    };
+  }
+
+  static Future<Map<String, dynamic>> enrollFace(List<String> selfies) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('${ApiConstants.baseUrl}${ApiConstants.faceEnrollment}'),
+            headers: await _headers(),
+            body: jsonEncode({'selfies': selfies}),
+          )
+          .timeout(const Duration(seconds: 60));
+      if (!await _handleResponse(response)) {
+        return {'success': false, 'message': 'Session expired'};
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200) return {'success': true, ...data};
+      return {
+        'success': false,
+        'message': data['error'] ?? 'Face enrollment failed',
+      };
+    } catch (_) {
+      return {
+        'success': false,
+        'message': 'Face service is unavailable. Please try again.',
+      };
+    }
   }
 
   static Future<Map<String, dynamic>> checkOut({
@@ -214,7 +295,10 @@ class ApiService {
     );
 
     if (!await _handleResponse(response)) {
-      return {'success': false, 'message': 'Session expired, please log in again'};
+      return {
+        'success': false,
+        'message': 'Session expired, please log in again',
+      };
     }
 
     final data = jsonDecode(response.body);

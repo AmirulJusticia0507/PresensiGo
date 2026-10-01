@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -35,6 +36,10 @@ func (m *mockAuthUsecase) GetByID(id uuid.UUID) (*model.User, error) {
 }
 
 func (m *mockAuthUsecase) UpdateFaceEmbedding(userID uuid.UUID, embedding []byte) error {
+	return nil
+}
+
+func (m *mockAuthUsecase) EnrollFace(ctx context.Context, userID uuid.UUID, selfies []string) error {
 	return nil
 }
 
@@ -71,6 +76,10 @@ func (m *mockAttendanceUsecase) UpdateLocation(id uuid.UUID, req *model.Location
 
 func (m *mockAttendanceUsecase) DeleteLocation(id uuid.UUID) error {
 	return nil
+}
+
+func (m *mockAttendanceUsecase) GetFaceChallenge(userID uuid.UUID) (*model.FaceChallengeResponse, error) {
+	return &model.FaceChallengeResponse{Challenge: "turn_left", Token: "token"}, nil
 }
 
 func newTestHandler() (*Handler, *mux.Router) {
@@ -525,5 +534,400 @@ func TestHealthReadyEndpoint_NotReady_Both(t *testing.T) {
 
 	if ready, ok := response["ready"]; !ok || ready {
 		t.Errorf("expected {\"ready\": false}, got %v", response)
+	}
+}
+
+// TestValidationError_IncludesRequestID verifies that validation errors include requestID
+func TestValidationError_IncludesRequestID(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	// Invalid latitude (>90)
+	payload := map[string]interface{}{
+		"name":          "Test Location",
+		"latitude":      100,
+		"longitude":     106.8,
+		"radius_meters": 50,
+	}
+	b, _ := json.Marshal(payload)
+
+	ctx := context.WithValue(context.Background(), middleware.RoleKey, "admin")
+	ctx = context.WithValue(ctx, middleware.RequestIDKey, "test_request_123")
+	req := httptest.NewRequest(http.MethodPost, "/api/locations", bytes.NewReader(b))
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.CreateLocation(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 for invalid latitude, got %d", w.Code)
+	}
+
+	var response map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if _, ok := response["requestID"]; !ok {
+		t.Error("expected requestID in error response")
+	}
+
+	if response["requestID"] != "test_request_123" {
+		t.Errorf("expected requestID to be 'test_request_123', got %v", response["requestID"])
+	}
+}
+
+// TestValidationError_HasContentType verifies error response has Content-Type: application/json
+func TestValidationError_HasContentType(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	// Invalid email format
+	payload := map[string]interface{}{
+		"name":     "John Doe",
+		"email":    "not-an-email",
+		"password": "password123",
+	}
+	b, _ := json.Marshal(payload)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.Register(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+
+	contentType := w.Header().Get("Content-Type")
+	if contentType != "application/json" {
+		t.Errorf("expected Content-Type: application/json, got %s", contentType)
+	}
+}
+
+// TestValidationError_SanitizeFieldErrors verifies field error messages are sanitized
+func TestValidationError_SanitizeFieldErrors(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	// Invalid latitude
+	payload := map[string]interface{}{
+		"latitude":       100,
+		"longitude":      106.8,
+		"device_uuid":    "123e4567-e89b-12d3-a456-426614174000",
+		"timestamp":      1234567890,
+		"hmac_signature": "sig",
+	}
+	b, _ := json.Marshal(payload)
+
+	ctx := context.WithValue(context.Background(), middleware.UserIDKey, uuid.New())
+	req := httptest.NewRequest(http.MethodPost, "/api/attendance/check-in", bytes.NewReader(b))
+	req = req.WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.CheckIn(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+
+	var response map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	// Verify error response has details array
+	if _, ok := response["details"]; !ok {
+		t.Error("expected details array in error response")
+	}
+
+	// Verify details don't contain technical constraint info
+	details := response["details"].([]interface{})
+	for _, detail := range details {
+		detailStr := detail.(string)
+		if strings.Contains(detailStr, "struct tag") || strings.Contains(detailStr, "validator") {
+			t.Errorf("error message contains technical details: %s", detailStr)
+		}
+	}
+}
+
+
+// TestErrorHandler_ValidationError_Returns400 tests that validation errors use the error handler correctly
+func TestErrorHandler_ValidationError_Returns400(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	// Create a request with invalid data
+	payload := `{"name": "", "email": "test@test.com", "password": "pass"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", strings.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+
+	// Add request ID to context
+	ctx := context.WithValue(req.Context(), middleware.RequestIDKey, "req_validation_test")
+	req = req.WithContext(ctx)
+
+	w := httptest.NewRecorder()
+	h.Register(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Code)
+	}
+
+	contentType := w.Header().Get("Content-Type")
+	if contentType != "application/json" {
+		t.Errorf("Expected Content-Type 'application/json', got '%s'", contentType)
+	}
+
+	var response map[string]interface{}
+	json.NewDecoder(w.Body).Decode(&response)
+	if _, hasError := response["error"]; !hasError {
+		t.Error("Expected 'error' field in response")
+	}
+	if _, hasRequestID := response["requestID"]; !hasRequestID {
+		t.Error("Expected 'requestID' field in response")
+	}
+}
+
+// TestErrorHandler_AuthError_Returns401 tests that auth errors return 401 with proper format
+func TestErrorHandler_AuthError_Returns401(t *testing.T) {
+	mockAuth := &mockAuthUsecase{}
+	h := NewHandler(mockAuth, &mockAttendanceUsecase{}, nil, nil)
+
+	// Attempt check-in without authentication context
+	payload := `{"latitude": 45.0, "longitude": 106.8, "device_id": "device123", "signature": "sig"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/attendance/check-in", strings.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+
+	ctx := context.WithValue(req.Context(), middleware.RequestIDKey, "req_auth_test")
+	req = req.WithContext(ctx)
+
+	w := httptest.NewRecorder()
+	h.CheckIn(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", w.Code)
+	}
+
+	contentType := w.Header().Get("Content-Type")
+	if contentType != "application/json" {
+		t.Errorf("Expected Content-Type 'application/json', got '%s'", contentType)
+	}
+
+	var response map[string]interface{}
+	json.NewDecoder(w.Body).Decode(&response)
+	if response["error"] != "unauthorized" {
+		t.Errorf("Expected error 'unauthorized', got '%v'", response["error"])
+	}
+}
+
+// TestErrorHandler_AllErrorsIncludeRequestID tests that all error responses include request ID
+func TestErrorHandler_AllErrorsIncludeRequestID(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	tests := []struct {
+		name            string
+		method          string
+		path            string
+		payload         string
+		expectedStatus  int
+		shouldHaveError bool
+	}{
+		{
+			name:            "invalid_registration_email",
+			method:          "POST",
+			path:            "/api/auth/register",
+			payload:         `{"name": "Test", "email": "invalid-email", "password": "pass123"}`,
+			expectedStatus:  http.StatusBadRequest,
+			shouldHaveError: true,
+		},
+		{
+			name:           "unauthorized_checkin",
+			method:         "POST",
+			path:           "/api/attendance/check-in",
+			payload:        `{"latitude": 0, "longitude": 0, "device_id": "dev", "signature": "sig"}`,
+			expectedStatus: http.StatusUnauthorized,
+			shouldHaveError: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(test.method, test.path, strings.NewReader(test.payload))
+			req.Header.Set("Content-Type", "application/json")
+
+			ctx := context.WithValue(req.Context(), middleware.RequestIDKey, "req_test_"+test.name)
+			req = req.WithContext(ctx)
+
+			w := httptest.NewRecorder()
+
+			// Call appropriate handler
+			if test.path == "/api/auth/register" {
+				h.Register(w, req)
+			} else if test.path == "/api/attendance/check-in" {
+				h.CheckIn(w, req)
+			}
+
+			if w.Code != test.expectedStatus {
+				t.Errorf("Expected status %d, got %d", test.expectedStatus, w.Code)
+			}
+
+			var response map[string]interface{}
+			json.NewDecoder(w.Body).Decode(&response)
+
+			if test.shouldHaveError {
+				if _, hasRequestID := response["requestID"]; !hasRequestID {
+					t.Error("Expected 'requestID' in error response")
+				}
+				if response["requestID"] != "req_test_"+test.name {
+					t.Errorf("Expected requestID 'req_test_%s', got '%v'", test.name, response["requestID"])
+				}
+			}
+		})
+	}
+}
+
+// TestErrorResponse_NoLeakSensitiveInfo tests that error responses don't leak internal details
+func TestErrorResponse_NoLeakSensitiveInfo(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	// Test with invalid coordinates (tries various error-inducing inputs)
+	tests := []struct {
+		name            string
+		latitude        float64
+		longitude       float64
+		shouldFail      bool
+		unexpectedTerms []string
+	}{
+		{
+			name:             "out_of_range_latitude",
+			latitude:         100,
+			longitude:        106.8,
+			shouldFail:       true,
+			unexpectedTerms: []string{"schema", "column", "database", "table", "goroutine", "panic"},
+		},
+		{
+			name:             "out_of_range_longitude",
+			latitude:         45.0,
+			longitude:        200,
+			shouldFail:       true,
+			unexpectedTerms: []string{"schema", "column", "database", "table", "goroutine", "panic"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			payload := map[string]interface{}{
+				"name":          "Test Location",
+				"latitude":      test.latitude,
+				"longitude":     test.longitude,
+				"radius_meters": 50,
+			}
+			b, _ := json.Marshal(payload)
+
+			ctx := context.WithValue(context.Background(), middleware.RoleKey, "admin")
+			ctx = context.WithValue(ctx, middleware.RequestIDKey, "test_req")
+			req := httptest.NewRequest(http.MethodPost, "/api/locations", bytes.NewReader(b))
+			req = req.WithContext(ctx)
+			req.Header.Set("Content-Type", "application/json")
+
+			w := httptest.NewRecorder()
+			h.CreateLocation(w, req)
+
+			responseBody := w.Body.String()
+
+			// Check that sensitive info is not in response
+			for _, term := range test.unexpectedTerms {
+				if strings.Contains(strings.ToLower(responseBody), strings.ToLower(term)) {
+					t.Errorf("Response contains sensitive term '%s': %s", term, responseBody)
+				}
+			}
+
+			// Verify it's valid JSON
+			var response map[string]interface{}
+			if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+				t.Errorf("Response is not valid JSON: %v", err)
+			}
+		})
+	}
+}
+
+// TestErrorResponse_ContentTypeApplicationJSON tests all error responses have correct Content-Type
+func TestErrorResponse_ContentTypeApplicationJSON(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	tests := []struct {
+		name           string
+		method         string
+		path           string
+		payload        string
+		expectedStatus int
+	}{
+		{
+			name:           "validation_error",
+			method:         "POST",
+			path:           "/api/auth/register",
+			payload:        `{"name": "", "email": "x", "password": "p"}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "auth_error",
+			method:         "POST",
+			path:           "/api/attendance/check-in",
+			payload:        `{"latitude": 0, "longitude": 0, "device_id": "", "signature": ""}`,
+			expectedStatus: http.StatusUnauthorized,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(test.method, test.path, strings.NewReader(test.payload))
+			req.Header.Set("Content-Type", "application/json")
+
+			ctx := context.WithValue(req.Context(), middleware.RequestIDKey, "req_test")
+			req = req.WithContext(ctx)
+
+			w := httptest.NewRecorder()
+
+			if test.path == "/api/auth/register" {
+				h.Register(w, req)
+			} else if test.path == "/api/attendance/check-in" {
+				h.CheckIn(w, req)
+			}
+
+			contentType := w.Header().Get("Content-Type")
+			if contentType != "application/json" {
+				t.Errorf("Expected Content-Type 'application/json', got '%s' for %s", contentType, test.name)
+			}
+		})
+	}
+}
+
+// TestHandleError_Helper_IntegrationWithHandler tests the respondWithError helper function
+func TestHandleError_Helper_IntegrationWithHandler(t *testing.T) {
+	h := NewHandler(&mockAuthUsecase{}, &mockAttendanceUsecase{}, nil, nil)
+
+	// Test using the helper to respond with a custom error
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	ctx := context.WithValue(req.Context(), middleware.RequestIDKey, "req_helper_test")
+	req = req.WithContext(ctx)
+
+	w := httptest.NewRecorder()
+
+	// Create a custom error and use the handler
+	err := middleware.NotFoundError{Message: "User not found"}
+	h.respondWithError(w, req, err)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", w.Code)
+	}
+
+	var response middleware.ErrorResponse
+	json.NewDecoder(w.Body).Decode(&response)
+
+	if response.RequestID != "req_helper_test" {
+		t.Errorf("Expected requestID 'req_helper_test', got '%s'", response.RequestID)
+	}
+
+	if response.Error != "User not found" {
+		t.Errorf("Expected error 'User not found', got '%s'", response.Error)
 	}
 }

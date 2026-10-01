@@ -38,20 +38,40 @@ type Location struct {
 }
 
 type CheckInRequest struct {
-	Latitude   float64 `json:"latitude" validate:"required"`
-	Longitude  float64 `json:"longitude" validate:"required"`
-	DeviceUUID string  `json:"device_uuid" validate:"required"`
-	Timestamp  int64   `json:"timestamp" validate:"required"`
-	HMACSig    string  `json:"hmac_signature" validate:"required"`
-	SelfieData string  `json:"selfie_data"`
+	// Latitude in decimal degrees, range: -90 to 90
+	Latitude float64 `json:"latitude" validate:"required,min=-90,max=90"`
+	// Longitude in decimal degrees, range: -180 to 180
+	Longitude float64 `json:"longitude" validate:"required,min=-180,max=180"`
+	// DeviceUUID must be a valid UUID
+	DeviceUUID string `json:"device_uuid" validate:"required,uuid"`
+	// Timestamp in seconds since epoch
+	Timestamp int64 `json:"timestamp" validate:"required"`
+	// HMAC signature for request authentication
+	HMACSig string `json:"hmac_signature" validate:"required"`
+	// Optional base64-encoded selfie image data
+	SelfieData string `json:"selfie_data"`
+	// Short-lived signed challenge issued by the backend.
+	LivenessChallenge string `json:"liveness_challenge" validate:"required"`
+	LivenessToken     string `json:"liveness_token" validate:"required"`
+}
+
+type FaceChallengeResponse struct {
+	Challenge string    `json:"challenge"`
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
 
 type CheckOutRequest struct {
-	Latitude   float64 `json:"latitude" validate:"required"`
-	Longitude  float64 `json:"longitude" validate:"required"`
-	DeviceUUID string  `json:"device_uuid" validate:"required"`
-	Timestamp  int64   `json:"timestamp" validate:"required"`
-	HMACSig    string  `json:"hmac_signature" validate:"required"`
+	// Latitude in decimal degrees, range: -90 to 90
+	Latitude float64 `json:"latitude" validate:"required,min=-90,max=90"`
+	// Longitude in decimal degrees, range: -180 to 180
+	Longitude float64 `json:"longitude" validate:"required,min=-180,max=180"`
+	// DeviceUUID must be a valid UUID
+	DeviceUUID string `json:"device_uuid" validate:"required,uuid"`
+	// Timestamp in seconds since epoch
+	Timestamp int64 `json:"timestamp" validate:"required"`
+	// HMAC signature for request authentication
+	HMACSig string `json:"hmac_signature" validate:"required"`
 }
 
 type AttendanceResponse struct {
@@ -87,4 +107,47 @@ type SyncRequest struct {
 	Payloads       []OfflinePayload `json:"payloads" validate:"required"`
 	DeviceUUID     string           `json:"device_uuid" validate:"required"`
 	HMACSignatures pq.StringArray   `json:"hmac_signatures" validate:"required"`
+}
+
+// CreateLocationRequest contains fields for creating a new location with geofence
+type CreateLocationRequest struct {
+	// Location name, max 255 characters
+	Name string `json:"name" validate:"required,max=255"`
+	// Optional address description
+	Address *string `json:"address,omitempty" validate:"omitempty,max=500"`
+	// Latitude in decimal degrees, range: -90 to 90
+	Latitude float64 `json:"latitude" validate:"required,min=-90,max=90"`
+	// Longitude in decimal degrees, range: -180 to 180
+	Longitude float64 `json:"longitude" validate:"required,min=-180,max=180"`
+	// Radius in meters, must be greater than 0
+	RadiusMeters int `json:"radius_meters" validate:"required,gt=0"`
+}
+
+// UpdateLocationRequest contains fields for updating an existing location
+type UpdateLocationRequest struct {
+	// Location name, max 255 characters
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	// Optional address description
+	Address *string `json:"address,omitempty" validate:"omitempty,max=500"`
+	// Latitude in decimal degrees, range: -90 to 90
+	Latitude *float64 `json:"latitude,omitempty" validate:"omitempty,min=-90,max=90"`
+	// Longitude in decimal degrees, range: -180 to 180
+	Longitude *float64 `json:"longitude,omitempty" validate:"omitempty,min=-180,max=180"`
+	// Radius in meters, must be greater than 0
+	RadiusMeters *int `json:"radius_meters,omitempty" validate:"omitempty,gt=0"`
+}
+
+// UploadSelfieRequest contains selfie image metadata for validation
+type UploadSelfieRequest struct {
+	// File size in bytes, max 5MB (5242880 bytes)
+	FileSize int64 `json:"file_size" validate:"required,gt=0,max=5242880"`
+	// Image format: jpg, jpeg, or png
+	Format string `json:"format" validate:"required,oneof=jpg jpeg png"`
+}
+
+// UpdateEmbeddingRequest contains a face embedding vector for update
+type UpdateEmbeddingRequest struct {
+	// Face embedding vector, must have at least 1 element
+	// Typically 128 or 512-dimensional float32 vector
+	Embedding []float32 `json:"embedding" validate:"required,min=1"`
 }

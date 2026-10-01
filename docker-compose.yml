@@ -51,7 +51,26 @@ services:
       timeout: 5s
       retries: 5
 
+  ai-service:
+    build: ./ai-service
+    container_name: presensigo-ai
+    restart: unless-stopped
+    environment:
+      INSIGHTFACE_MODEL: ${INSIGHTFACE_MODEL:-buffalo_l}
+      LIVENESS_YAW_THRESHOLD: ${LIVENESS_YAW_THRESHOLD:-0.10}
+    ports:
+      - "${AI_PORT:-8000}:8000"
+    volumes:
+      - insightface_models:/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
 volumes:
   postgres_data:
   redis_data:
   minio_data:
+  insightface_models:

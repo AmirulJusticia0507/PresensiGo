@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/biometric_service.dart';
+import '../../auth/screens/face_enrollment_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -95,10 +97,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-              ),
+              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -114,7 +113,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 child: const Text(
                   'OK',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -157,10 +159,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-              ),
+              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -176,7 +175,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 child: const Text(
                   'OK',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -219,10 +221,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               '$_biometricName is not available on this device.\nPlease enable fingerprint/face ID in your device settings first.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-              ),
+              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -238,7 +237,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 child: const Text(
                   'Got it',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -281,10 +283,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-              ),
+              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -300,7 +299,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 child: const Text(
                   'OK',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -326,7 +328,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.arrow_back_ios_new, size: 18, color: AppTheme.primaryColor),
+            child: const Icon(
+              Icons.arrow_back_ios_new,
+              size: 18,
+              color: AppTheme.primaryColor,
+            ),
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -341,6 +347,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _buildSectionHeader('Security'),
                   const SizedBox(height: 12),
                   _buildBiometricCard(),
+                  const SizedBox(height: 12),
+                  _buildFaceEnrollmentCard(),
                   const SizedBox(height: 24),
                   _buildSectionHeader('About'),
                   const SizedBox(height: 12),
@@ -386,9 +394,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  _biometricName == 'Face ID' ? Icons.face_rounded : Icons.fingerprint,
+                  _biometricName == 'Face ID'
+                      ? Icons.face_rounded
+                      : Icons.fingerprint,
                   size: 24,
-                  color: _biometricAvailable ? AppTheme.primaryColor : AppTheme.warningColor,
+                  color: _biometricAvailable
+                      ? AppTheme.primaryColor
+                      : AppTheme.warningColor,
                 ),
               ),
               const SizedBox(width: 16),
@@ -411,7 +423,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           : 'Device does not support $_biometricName',
                       style: TextStyle(
                         fontSize: 13,
-                        color: _biometricAvailable ? AppTheme.textSecondary : AppTheme.warningColor,
+                        color: _biometricAvailable
+                            ? AppTheme.textSecondary
+                            : AppTheme.warningColor,
                       ),
                     ),
                   ],
@@ -436,9 +450,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Row(
               children: [
                 Icon(
-                  _biometricEnabled ? Icons.check_circle : Icons.radio_button_unchecked,
+                  _biometricEnabled
+                      ? Icons.check_circle
+                      : Icons.radio_button_unchecked,
                   size: 20,
-                  color: _biometricEnabled ? AppTheme.secondaryColor : AppTheme.textMuted,
+                  color: _biometricEnabled
+                      ? AppTheme.secondaryColor
+                      : AppTheme.textMuted,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -480,6 +498,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildFaceEnrollmentCard() {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppTheme.borderColor),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        leading: const CircleAvatar(child: Icon(Icons.face_retouching_natural)),
+        title: const Text(
+          'Face verification',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: const Text('Enroll or replace your check-in face profile'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const FaceEnrollmentScreen()),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAboutCard() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -491,7 +533,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       child: Column(
         children: [
-          _buildAboutRow(Icons.business_rounded, 'PresensiGo', 'Smart Attendance System'),
+          _buildAboutRow(
+            Icons.business_rounded,
+            'PresensiGo',
+            'Smart Attendance System',
+          ),
           const Divider(height: 24),
           _buildAboutRow(Icons.code_rounded, 'Version', '1.0.0+1'),
           const Divider(height: 24),
@@ -525,10 +571,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         Text(
           value,
-          style: TextStyle(
-            fontSize: 14,
-            color: AppTheme.textSecondary,
-          ),
+          style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
         ),
       ],
     );

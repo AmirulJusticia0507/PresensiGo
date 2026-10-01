@@ -272,8 +272,8 @@ Status "sudah tersedia" berarti kode atau UI ditemukan, bukan otomatis berarti p
 |-----------|-------------|------|-------------|------|--------|
 | **Milestone 1: Alur Presensi Minimum Berfungsi** | 6 | 6 | 0 | 0 | ✅ DONE |
 | **Milestone 2: Security & Operasional** | 5 | 3 | 0 | 2 | 🔄 60% Complete |
-| **Milestone 3: Fitur Pembeda Produk** | 5 | 0 | 0 | 5 | ❌ TODO |
-| **Overall Project** | 16 | 9 | 0 | 7 | 🔄 56% Complete |
+| **Milestone 3: Fitur Pembeda Produk** | 5 | 2 | 0 | 3 | 🔄 40% Complete |
+| **Overall Project** | 16 | 11 | 0 | 5 | 🔄 69% Complete |
 
 ---
 
@@ -492,8 +492,8 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 
 ### 📋 Milestone 3: Fitur Pembeda Produk (P2 — Advanced Features & Completeness)
 
-#### ❌ 3.1 Camera & Selfie Upload to MinIO
-- **Status:** ❌ TODO
+#### ✅ 3.1 Camera & Selfie Upload to MinIO
+- **Status:** ✅ DONE
 - **Description:**
   - Implement camera capture on mobile using `image_picker` or `camera` package
   - Compress selfie image to reasonable size (e.g., JPEG 500x500, < 1MB)
@@ -507,8 +507,8 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 - **Estimated Effort:** 4 days (UI + compression + upload + error handling)
 - **Test:** Upload multiple sizes/formats, verify storage, verify URL accessible.
 
-#### ❌ 3.2 AI Face Recognition, Enrollment & Liveness Detection
-- **Status:** ❌ TODO
+#### ✅ 3.2 AI Face Recognition, Enrollment & Liveness Detection
+- **Status:** ✅ DONE
 - **Description:**
   - Provision AI service container (FastAPI or similar) with face detection/embedding model (e.g., FaceNet, ArcFace)
   - Implement enrollment flow: capture 2–3 selfies, compute embeddings, store in database, set threshold

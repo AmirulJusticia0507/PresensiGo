@@ -11,6 +11,7 @@ type Config struct {
 	DB     DBConfig
 	Redis  RedisConfig
 	MinIO  MinIOConfig
+	AI     AIConfig
 	JWT    JWTConfig
 	Server ServerConfig
 }
@@ -35,6 +36,12 @@ type MinIOConfig struct {
 	SecretKey string
 	Bucket    string
 	UseSSL    bool
+}
+
+type AIConfig struct {
+	URL                 string
+	TimeoutSeconds      int
+	SimilarityThreshold float64
 }
 
 type JWTConfig struct {
@@ -77,6 +84,11 @@ func Load() *Config {
 			Bucket:    getEnv("MINIO_BUCKET", "presensigo"),
 			UseSSL:    getEnvBool("MINIO_USE_SSL", false),
 		},
+		AI: AIConfig{
+			URL:                 getEnv("AI_SERVICE_URL", "http://localhost:8000"),
+			TimeoutSeconds:      getEnvInt("AI_TIMEOUT_SECONDS", 15),
+			SimilarityThreshold: getEnvFloat("FACE_SIMILARITY_THRESHOLD", 0.45),
+		},
 		JWT: JWTConfig{
 			Secret:     getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
 			ExpireHour: getEnvInt("JWT_EXPIRE_HOUR", 24),
@@ -86,6 +98,15 @@ func Load() *Config {
 			Mode: getEnv("SERVER_MODE", "debug"),
 		},
 	}
+}
+
+func getEnvFloat(key string, fallback float64) float64 {
+	if value, exists := os.LookupEnv(key); exists {
+		if floatVal, err := strconv.ParseFloat(value, 64); err == nil {
+			return floatVal
+		}
+	}
+	return fallback
 }
 
 func getEnv(key, fallback string) string {
