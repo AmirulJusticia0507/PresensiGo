@@ -90,7 +90,7 @@ func (rl *RateLimiter) RateLimitMiddleware(endpoint string) func(http.Handler) h
 			}
 
 			// Set rate limit headers
-			remaining := config.Limit - count + 1
+			remaining := config.Limit - count
 			if remaining < 0 {
 				remaining = 0
 			}

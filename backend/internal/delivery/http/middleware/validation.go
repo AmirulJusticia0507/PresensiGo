@@ -111,6 +111,7 @@ func SanitizeValidationErrors(err error) []string {
 
 // sanitizeFieldError creates a sanitized error message for a specific field validation failure
 func sanitizeFieldError(fieldName, tag, param string) string {
+	normalizedField := strings.ToLower(fieldName)
 	switch tag {
 	case "required":
 		return fieldName + " is required"
@@ -119,23 +120,24 @@ func sanitizeFieldError(fieldName, tag, param string) string {
 	case "uuid":
 		return fieldName + " must be a valid UUID"
 	case "min":
-		if strings.HasSuffix(fieldName, "_latitude") || strings.HasSuffix(fieldName, "_longitude") {
+		if strings.Contains(normalizedField, "latitude") || strings.Contains(normalizedField, "longitude") {
 			return fieldName + " must be within valid geographic range"
 		}
 		return fieldName + " must be at least " + param
 	case "max":
-		if strings.HasSuffix(fieldName, "_latitude") || strings.HasSuffix(fieldName, "_longitude") {
+		if strings.Contains(normalizedField, "latitude") || strings.Contains(normalizedField, "longitude") {
 			return fieldName + " must be within valid geographic range"
 		}
 		return fieldName + " must be at most " + param
+	case "gte", "lte":
+		if strings.Contains(normalizedField, "latitude") || strings.Contains(normalizedField, "longitude") {
+			return fieldName + " must be within valid geographic range"
+		}
+		return fieldName + " is outside the allowed range"
 	case "gt":
 		return fieldName + " must be greater than " + param
-	case "gte":
-		return fieldName + " must be greater than or equal to " + param
 	case "lt":
 		return fieldName + " must be less than " + param
-	case "lte":
-		return fieldName + " must be less than or equal to " + param
 	case "oneof":
 		return fieldName + " must be one of: " + param
 	case "len":

@@ -13,12 +13,14 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.21
+          go-version-file: backend/go.mod
           cache: true
       
       - name: Run tests
@@ -28,10 +30,25 @@ jobs:
         run: cd backend && go vet ./...
       
       - name: Check formatting
-        run: cd backend && [ -z "$(go fmt ./...)" ] || (echo "Code is not formatted" && exit 1)
+        shell: bash
+        run: |
+          cd backend
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if [[ -z "$base" || "$base" == "0000000000000000000000000000000000000000" ]]; then
+            base="$(git rev-list --max-parents=0 HEAD)"
+          fi
+          files="$(git diff --name-only --diff-filter=ACMR "$base" "${{ github.sha }}" -- '*.go' | sed 's#^backend/##')"
+          if [[ -n "$files" ]]; then
+            unformatted="$(gofmt -l $files)"
+            test -z "$unformatted" || { echo "$unformatted"; exit 1; }
+          fi
       
       - name: Run linter
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v6
         with:
           working-directory: backend
           version: latest
@@ -40,7 +57,7 @@ jobs:
         run: cd backend && go test ./... -coverprofile=coverage.out
       
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           files: ./backend/coverage.out
           flags: backend
@@ -52,12 +69,12 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.13.x
+          channel: stable
           cache: true
       
       - name: Get dependencies
@@ -70,7 +87,7 @@ jobs:
         run: cd presensigo_mobile && flutter test --coverage
       
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           files: ./presensigo_mobile/coverage/lcov.info
           flags: mobile

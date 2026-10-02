@@ -1,5 +1,7 @@
 # Smart Attendance System
 
+[![CI](https://github.com/AmirulJusticia0507/PresensiGo/actions/workflows/ci.yml/badge.svg)](https://github.com/AmirulJusticia0507/PresensiGo/actions/workflows/ci.yml)
+
 Sistem presensi modern berbasis geofencing dan face recognition real-time dengan kemampuan offline-first sync.
 
 ## Tech Stack Utama

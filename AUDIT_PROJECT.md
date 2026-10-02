@@ -1,6 +1,6 @@
 # Audit Status Project PresensiGo
 
-Tanggal audit: 1 Oktober 2026  
+Tanggal audit: 1 Oktober 2026
 Ruang lingkup: source code backend Go, aplikasi Flutter, database migration, Docker Compose, dokumentasi, dan pemeriksaan otomatis lokal.
 
 ## Ringkasan Eksekutif
@@ -18,13 +18,13 @@ Hambatan terbesar saat ini:
 
 ## Status Pemeriksaan Otomatis
 
-| Pemeriksaan | Hasil | Catatan |
-|---|---|---|
-| `go test ./...` | Gagal | Package `internal/delivery/http/middleware/validate` tidak dapat dikompilasi. |
-| `go vet ./...` | Gagal | Konflik import `http` pada middleware validasi. |
-| `flutter analyze` | Lulus dengan 3 temuan | 2 warning dan 1 info: field tidak dipakai, import tidak dipakai, dan penggunaan context setelah async gap. |
-| `flutter test` | Lulus | Hanya 1 widget test: login screen dapat dirender. |
-| `docker compose config` | Lulus | Konfigurasi Compose valid secara sintaks. Belum dilakukan pengujian integrasi service. |
+| Pemeriksaan               | Hasil                 | Catatan                                                                                                    |
+| ------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `go test ./...`         | Gagal                 | Package`internal/delivery/http/middleware/validate` tidak dapat dikompilasi.                             |
+| `go vet ./...`          | Gagal                 | Konflik import`http` pada middleware validasi.                                                           |
+| `flutter analyze`       | Lulus dengan 3 temuan | 2 warning dan 1 info: field tidak dipakai, import tidak dipakai, dan penggunaan context setelah async gap. |
+| `flutter test`          | Lulus                 | Hanya 1 widget test: login screen dapat dirender.                                                          |
+| `docker compose config` | Lulus                 | Konfigurasi Compose valid secara sintaks. Belum dilakukan pengujian integrasi service.                     |
 
 ## Yang Sudah Tersedia
 
@@ -268,18 +268,19 @@ Status "sudah tersedia" berarti kode atau UI ditemukan, bukan otomatis berarti p
 
 ### Completion Summary
 
-| Milestone | Total Items | Done | In Progress | Todo | Status |
-|-----------|-------------|------|-------------|------|--------|
-| **Milestone 1: Alur Presensi Minimum Berfungsi** | 6 | 6 | 0 | 0 | ✅ DONE |
-| **Milestone 2: Security & Operasional** | 5 | 3 | 0 | 2 | 🔄 60% Complete |
-| **Milestone 3: Fitur Pembeda Produk** | 5 | 3 | 1 | 1 | 🔄 60% Complete |
-| **Overall Project** | 16 | 12 | 1 | 3 | 🔄 75% Complete |
+| Milestone                                              | Total Items | Done | In Progress | Todo | Status          |
+| ------------------------------------------------------ | ----------- | ---- | ----------- | ---- | --------------- |
+| **Milestone 1: Alur Presensi Minimum Berfungsi** | 6           | 6    | 0           | 0    | ✅ DONE         |
+| **Milestone 2: Security & Operasional**          | 5           | 3    | 2           | 0    | 🔄 60% Complete |
+| **Milestone 3: Fitur Pembeda Produk**            | 5           | 3    | 1           | 1    | 🔄 60% Complete |
+| **Overall Project**                              | 16          | 12   | 3           | 1    | 🔄 75% Complete |
 
 ---
 
 ### 📋 Milestone 1: Alur Presensi Minimum Berfungsi (P0 — Core Features)
 
 #### ✅ 1.1 Fix Backend Validation Package
+
 - **Status:** ✅ DONE
 - **Description:** Repair `backend/internal/delivery/http/middleware/validate/validate.go` to resolve:
   - Import conflict between `net/http` and delivery package `http`
@@ -292,8 +293,9 @@ Status "sudah tersedia" berarti kode atau UI ditemukan, bukan otomatis berarti p
 - **Evidence:** No compilation errors expected after fix.
 
 #### ✅ 1.2 Align Database Configuration
+
 - **Status:** ✅ DONE
-- **Description:** 
+- **Description:**
   - Align Docker Compose PostgreSQL port with backend default (both use 5432)
   - Create and commit `.env.example` with all required variables
   - Document quick start setup for fresh clone
@@ -301,6 +303,7 @@ Status "sudah tersedia" berarti kode atau UI ditemukan, bukan otomatis berarti p
 - **Quick Start:** Clone → copy `.env.example` to `.env` → `docker compose up` → `make test` should work.
 
 #### ✅ 1.3 Fix Spatial Coordinate Handling
+
 - **Status:** ✅ DONE
 - **Description:**
   - Correct `CreateLocation` to use `ST_MakePoint(longitude, latitude)` not `(latitude, longitude)`
@@ -311,6 +314,7 @@ Status "sudah tersedia" berarti kode atau UI ditemukan, bukan otomatis berarti p
 - **Test:** Repository integration test with known coordinates and distance verification.
 
 #### ✅ 1.4 Implement Consistent Device Binding
+
 - **Status:** ✅ DONE
 - **Description:**
   - Standardize device ID source across login, check-in, check-out endpoints
@@ -322,6 +326,7 @@ Status "sudah tersedia" berarti kode atau UI ditemukan, bukan otomatis berarti p
 - **Test:** Integration test: login from device A, attempt check-in from device B (should fail), perform rebind, retry check-in (should succeed).
 
 #### ✅ 1.5 Redesign HMAC Signing & Payload Authenticity
+
 - **Status:** ✅ DONE
 - **Description:**
   - Redesign payload signing protocol to use identical canonical form on mobile and backend
@@ -334,6 +339,7 @@ Status "sudah tersedia" berarti kode atau UI ditemukan, bukan otomatis berarti p
 - **Test:** Integration test: modify payload byte, verify signature rejected; repeat with stale timestamp (should fail).
 
 #### ✅ 1.6 Improve Mobile Network Layer & Base URL Configuration
+
 - **Status:** ✅ DONE
 - **Description:**
   - Replace hardcoded `localhost` base URL with environment-based configuration
@@ -349,26 +355,31 @@ Status "sudah tersedia" berarti kode atau UI ditemukan, bukan otomatis berarti p
 ### 📊 Session Summary
 
 #### Completed in This Session
+
 - ✅ P1 #1: RBAC spec created, 6 tasks executed, code committed
 - ✅ P1 #2: Token Security spec created, 6 tasks executed, code committed, spec format fixed
 - ✅ P1 #3: Redis Rate Limiting spec created, 5 tasks executed, code committed
 - ✅ AUDIT_PROJECT.md updated with P1 #1, #2, #3 progress
 
 #### Commits
+
 - `feat: implement role-based authorization (RBAC) untuk location mutations`
 - `feat: implement secure token storage and session lifecycle management`
 - `feat: implement Redis rate limiting for public endpoints`
 - Multiple spec format and documentation commits
 
 #### Branch
+
 All changes on `fix/validate-middleware` branch.
 
 #### Next Priority (Immediate — Next 1-2 Days)
+
 1. **P1 #4:** Input Validation, Error Handling & Response Hygiene
 2. **P1 #5:** CI/CD Pipeline (optional, can defer)
 3. Run manual verification: login 6x → 6th returns 429; /health → 200 ok; /health/ready → 200/503 based on Redis
 
 #### Future: Milestone 3
+
 Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile Features
 
 ---
@@ -376,10 +387,11 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 ### 📋 Milestone 2: Security & Operasional (P1 — Security, Compliance, Integrations)
 
 #### ✅ 2.1 Implement Role-Based Authorization (RBAC)
+
 - **Status:** ✅ DONE
 - **Completion Date:** Today
 - **Description:** Parse and inject JWT `role` claim into request context; restrict POST/PUT/DELETE location endpoints to `admin` role only; return HTTP 403 for unauthorized requests.
-- **Implementation:** 
+- **Implementation:**
   - Added `RoleKey` constant to middleware
   - Modified `AuthMiddleware()` to inject `claims.Role` into context
   - Implemented `GetRoleFromContext(ctx)` helper with "employee" default
@@ -387,7 +399,7 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
   - Protected `CreateLocation()`, `UpdateLocation()`, `DeleteLocation()` with authorization checks
   - Added 9 comprehensive unit/integration tests
   - Seeded admin user `admin@presensigo.local` (password `admin123`) and employee users
-- **Files Modified:** 
+- **Files Modified:**
   - `backend/internal/delivery/http/middleware/auth.go`
   - `backend/internal/delivery/http/handler.go`
   - `backend/internal/delivery/http/handler_test.go`
@@ -399,6 +411,7 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 - **Test Evidence:** Integration test suite with admin and employee tokens against location endpoints.
 
 #### ✅ 2.2 Secure Token Storage & Session Lifecycle
+
 - **Status:** ✅ DONE
 - **Completion Date:** Today
 - **Description:** Replace `SharedPreferences` JWT storage with `flutter_secure_storage`; implement proper session lifecycle, handle token expiry with automatic redirect to login, implement secure logout, and fix biometric login to validate token freshness.
@@ -427,6 +440,7 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 - **Test Evidence:** Session state after token expiry, biometric access with expired token, logout clearing all state.
 
 #### ❌ 2.3 Activate Redis Rate Limiting
+
 - **Status:** ❌ TODO
 - **Description:**
   - Initialize Redis connection in `main.go` with proper lifecycle (connect on startup, graceful shutdown)
@@ -440,6 +454,7 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 - **Test:** Exceed rate limit, verify HTTP 429; Redis down, verify graceful behavior.
 
 #### ✅ 2.3 Activate Redis Rate Limiting
+
 - **Status:** ✅ DONE
 - **Completion Date:** Today
 - **Description:** Activate Redis rate limiting to protect against brute force and DDoS. Initialize Redis connection with lifecycle management, wire middleware to endpoints, normalize client IP, define per-endpoint limits, handle Redis unavailability, and add health check endpoints.
@@ -462,8 +477,9 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 - **Priority:** Medium
 - **Test Evidence:** 8 unit tests covering IP extraction, rate limiting, fail-open, circuit breaker
 
-#### ❌ 2.4 Input Validation, Error Handling & Response Hygiene
-- **Status:** ❌ TODO
+#### 🔄 2.4 Input Validation, Error Handling & Response Hygiene
+
+- **Status:** 🔄 IN PROGRESS
 - **Description:**
   - Activate `validate` tags on all request models (latitude/longitude bounds, radius >= 0, file size limits, string length)
   - Implement domain validation: latitude [-90, 90], longitude [-180, 180], radius > 0, selfie <= 5MB, embedding vector length > 0
@@ -474,9 +490,21 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 - **Priority:** High — security and usability
 - **Estimated Effort:** 3 days (validation + error mapping + logging + CORS config)
 - **Test:** Invalid lat/lng, oversized file, SQL injection attempt → all return safe 400/403 responses.
+- **Implemented:**
+  - Request validation tags and reusable validation middleware
+  - Centralized, sanitized JSON error responses
+  - Request ID middleware and structured security/validation logging
+  - Environment-aware CORS configuration
+  - Unit and integration test coverage for validation, error mapping, request IDs, CORS, and injection payloads
+- **Remaining / blockers (verified 2 October 2026):**
+  - Validation tests still fail because `required` rejects valid zero latitude/longitude values
+  - Several “valid request” fixtures have not been updated for newly required liveness and idempotency fields
+  - Sanitized latitude/longitude messages do not yet match the expected client-facing range messages
+  - Must rerun `go test ./...` successfully before marking this item DONE
 
-#### ❌ 2.5 CI/CD Pipeline & Automated Checks
-- **Status:** ❌ TODO
+#### 🔄 2.5 CI/CD Pipeline & Automated Checks
+
+- **Status:** 🔄 IN PROGRESS
 - **Description:**
   - Create GitHub Actions (or equivalent) workflow triggered on PR/push
   - Backend: `go test ./...`, `go vet ./...`, `go fmt check`, `golint`
@@ -487,12 +515,25 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 - **Priority:** High — prevents regression and maintains code quality
 - **Estimated Effort:** 2 days (workflow + badge + documentation)
 - **Example:** `.github/workflows/ci.yml` with backend/mobile matrix steps.
+- **Implemented:**
+  - GitHub Actions workflow for push and pull requests
+  - Backend test, vet, formatting, lint, and coverage jobs
+  - Flutter dependency, analyze, test, and coverage jobs
+  - Aggregate status job that fails when backend or mobile checks fail
+  - Codecov configuration and contributor documentation
+- **Remaining / blockers (verified 2 October 2026):**
+  - The three latest CI runs on `fix/ci-test` all failed; latest run: `36840334315`
+  - Backend job is red because repository tests still fail, including validation fixtures and other regression tests
+  - Mobile workflow pins Flutter `3.13.x`, which is incompatible with the project's Dart SDK constraint `^3.13.2`
+  - CI status badge is not yet present in README
+  - Branch protection / required status checks still need to be confirmed before marking this item DONE
 
 ---
 
 ### 📋 Milestone 3: Fitur Pembeda Produk (P2 — Advanced Features & Completeness)
 
 #### ✅ 3.1 Camera & Selfie Upload to MinIO
+
 - **Status:** ✅ DONE
 - **Description:**
   - Implement camera capture on mobile using `image_picker` or `camera` package
@@ -508,6 +549,7 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 - **Test:** Upload multiple sizes/formats, verify storage, verify URL accessible.
 
 #### ✅ 3.2 AI Face Recognition, Enrollment & Liveness Detection
+
 - **Status:** ✅ DONE
 - **Description:**
   - Provision AI service container (FastAPI or similar) with face detection/embedding model (e.g., FaceNet, ArcFace)
@@ -522,6 +564,7 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 - **Test:** Enroll user, verify check-in succeeds; different face fails; liveness check required and enforced.
 
 #### ✅ 3.3 Offline-First Queue & Sync End-to-End
+
 - **Status:** ✅ DONE
 - **Description:**
   - Implement local SQLite/Hive queue on mobile: store check-in/out actions when offline
@@ -537,15 +580,17 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 - **Test:** Queue action offline, go online, verify synced; simulate duplicate submission (should be idempotent).
 
 #### 🔄 3.4 Mock Location Detection & Anti-Fraud Measures
+
 - **Status:** 🔄 IN PROGRESS (velocity check + client-side mock/accuracy detection done)
 - **Description:**
-  - [x] Detect mock location apps on Android: check Settings.Secure.ALLOW_MOCK_LOCATION or GPS accuracy / velocity anomalies
+  - [X] Detect mock location apps on Android: check Settings.Secure.ALLOW_MOCK_LOCATION or GPS accuracy / velocity anomalies
     - Implemented via `geolocator`'s `Position.isMocked` (Android mock provider, iOS 15+ `isSimulatedBySoftware`)
-  - [x] Reject check-in if mock location detected; provide user feedback
+  - [X] Reject check-in if mock location detected; provide user feedback
     - `LocationService.rejectionReason()` blocks check-in/check-out and surfaces the reason
-  - [x] Consider velocity checks: if user "teleports" between locations too fast, flag as suspicious
+  - [X] Consider velocity checks: if user "teleports" between locations too fast, flag as suspicious
     - `implausibleTravelSpeedKmh()` compares the previous check-out position; >1000 km/h is rejected,
-      >200 km/h is logged for review
+      > 200 km/h is logged for review
+      >
   - [ ] On iOS: extend beyond `isMocked` (no public API for detecting jailbroken/mock routing apps)
   - [ ] Optional: log and alert admin of repeated mock location attempts (potential fraud)
     - Currently only server-side logging; no admin alert surface yet
@@ -557,6 +602,7 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
   check-in (should be rejected); disable mock location, retry (should succeed).
 
 #### ❌ 3.5 Complete Mobile Features & Admin Flow
+
 - **Status:** ❌ TODO
 - **Description:**
   - **Register screen:** full flow, email/phone validation, password confirmation, terms acceptance
@@ -574,24 +620,24 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 
 ### 📊 Risk & Dependency Map
 
-| Item | Blocks | Dependencies | Risk Level |
-|------|--------|--------------|-----------|
-| 1.1 Backend Validation | 1.2–1.6, M2–M3 | None | 🔴 Critical |
-| 1.2 DB Config | 1.1, 1.3 | 1.1 | 🟡 High |
-| 1.3 Spatial Coords | 1.4–1.6, M3.1 | 1.1, 1.2 | 🔴 Critical |
-| 1.4 Device Binding | 1.5–1.6 | 1.1–1.3 | 🟡 High |
-| 1.5 HMAC Signing | 1.6 | 1.1–1.4 | 🔴 Critical |
-| 1.6 Mobile Net Layer | M2.1, M3.1–M3.5 | 1.1 | 🟡 High |
-| 2.1 RBAC | 2.4, M3.5 | 1.1–1.6 | 🟡 High |
-| 2.2 Token Security | M2.1, M3.3 | 1.1–1.6 | 🔴 Critical |
-| 2.3 Rate Limiting | None | 1.1–1.6 | 🟢 Medium |
-| 2.4 Validation & Errors | All | 1.1–1.6 | 🟡 High |
-| 2.5 CI/CD | None | All | 🟢 Medium |
-| 3.1 Selfie/MinIO | 3.2, M3.3 | 2.2, 2.4 | 🟡 High |
-| 3.2 Face AI | 3.1 | 2.2, 3.1 | 🔴 Critical |
-| 3.3 Offline Sync | None (parallel) | 1.1–1.6 | 🟡 High |
-| 3.4 Mock Location | None (optional) | 1.6 | 🟢 Medium |
-| 3.5 Complete Mobile | All | 1.1–1.6, 2.1–2.4 | 🟡 High |
+| Item                    | Blocks           | Dependencies       | Risk Level  |
+| ----------------------- | ---------------- | ------------------ | ----------- |
+| 1.1 Backend Validation  | 1.2–1.6, M2–M3 | None               | 🔴 Critical |
+| 1.2 DB Config           | 1.1, 1.3         | 1.1                | 🟡 High     |
+| 1.3 Spatial Coords      | 1.4–1.6, M3.1   | 1.1, 1.2           | 🔴 Critical |
+| 1.4 Device Binding      | 1.5–1.6         | 1.1–1.3           | 🟡 High     |
+| 1.5 HMAC Signing        | 1.6              | 1.1–1.4           | 🔴 Critical |
+| 1.6 Mobile Net Layer    | M2.1, M3.1–M3.5 | 1.1                | 🟡 High     |
+| 2.1 RBAC                | 2.4, M3.5        | 1.1–1.6           | 🟡 High     |
+| 2.2 Token Security      | M2.1, M3.3       | 1.1–1.6           | 🔴 Critical |
+| 2.3 Rate Limiting       | None             | 1.1–1.6           | 🟢 Medium   |
+| 2.4 Validation & Errors | All              | 1.1–1.6           | 🟡 High     |
+| 2.5 CI/CD               | None             | All                | 🟢 Medium   |
+| 3.1 Selfie/MinIO        | 3.2, M3.3        | 2.2, 2.4           | 🟡 High     |
+| 3.2 Face AI             | 3.1              | 2.2, 3.1           | 🔴 Critical |
+| 3.3 Offline Sync        | None (parallel)  | 1.1–1.6           | 🟡 High     |
+| 3.4 Mock Location       | None (optional)  | 1.6                | 🟢 Medium   |
+| 3.5 Complete Mobile     | All              | 1.1–1.6, 2.1–2.4 | 🟡 High     |
 
 ---
 
@@ -600,19 +646,20 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 ### Immediate Actions (Next 1–2 Weeks)
 
 1. **Verify Milestone 1 Completion**
+
    - [ ] Backend passes `go test ./...` and `go vet ./...`
    - [ ] Fresh clone from repo, run quick start, verify check-in/check-out succeeds
    - [ ] Device binding prevents cross-device check-in
    - [ ] HMAC payload matches on mobile and backend
    - [ ] Mobile base URL configurable per build variant
-
 2. **Prepare Milestone 2 Kickoff**
+
    - [ ] Assign team members to 2.1–2.5 tasks
    - [ ] Estimate timeline per task
    - [ ] Plan Sprint 1 (Weeks 3–4): 2.1 RBAC + 2.2 Token Security
    - [ ] Prepare CI/CD template (GitHub Actions or equivalent)
-
 3. **Stabilize Repository**
+
    - [ ] Commit pending 7 mobile files (from audit notes)
    - [ ] Clean up binary artefacts (`bin/presensigo.exe`, `android/build/reports`)
    - [ ] Update README to reflect current state (remove unmade features, fix paths)
@@ -620,12 +667,12 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 
 ### Milestone 2 Timeline (Weeks 3–6)
 
-| Week | Task | Owner | Status |
-|------|------|-------|--------|
-| 3 | 2.1 RBAC + 2.2 Token Security | Backend + Mobile | 🔄 In Sprint |
-| 4 | 2.3 Redis + 2.4 Input Validation | Backend | 🔄 In Sprint |
-| 5 | 2.5 CI/CD + bug fixes from testing | DevOps + Backend | 🔄 In Sprint |
-| 6 | Integration test + UAT prep | QA + PM | ⏳ Planned |
+| Week | Task                               | Owner            | Status       |
+| ---- | ---------------------------------- | ---------------- | ------------ |
+| 3    | 2.1 RBAC + 2.2 Token Security      | Backend + Mobile | 🔄 In Sprint |
+| 4    | 2.3 Redis + 2.4 Input Validation   | Backend          | 🔄 In Sprint |
+| 5    | 2.5 CI/CD + bug fixes from testing | DevOps + Backend | 🔄 In Sprint |
+| 6    | Integration test + UAT prep        | QA + PM          | ⏳ Planned   |
 
 ### Key Metrics to Track
 
