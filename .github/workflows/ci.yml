@@ -13,15 +13,16 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: backend/go.mod
           cache: true
+          cache-dependency-path: backend/go.sum
       
       - name: Run tests
         run: cd backend && go test ./... -v
@@ -69,7 +70,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
