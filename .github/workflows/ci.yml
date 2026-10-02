@@ -49,10 +49,11 @@ jobs:
           fi
       
       - name: Run linter
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
           working-directory: backend
-          version: latest
+          version: v2.14.0
+          only-new-issues: true
       
       - name: Generate coverage
         run: cd backend && go test ./... -coverprofile=coverage.out

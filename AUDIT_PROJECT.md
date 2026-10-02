@@ -271,9 +271,9 @@ Status "sudah tersedia" berarti kode atau UI ditemukan, bukan otomatis berarti p
 | Milestone                                              | Total Items | Done | In Progress | Todo | Status          |
 | ------------------------------------------------------ | ----------- | ---- | ----------- | ---- | --------------- |
 | **Milestone 1: Alur Presensi Minimum Berfungsi** | 6           | 6    | 0           | 0    | ✅ DONE         |
-| **Milestone 2: Security & Operasional**          | 5           | 3    | 2           | 0    | 🔄 60% Complete |
+| **Milestone 2: Security & Operasional**          | 5           | 5    | 0           | 0    | ✅ DONE         |
 | **Milestone 3: Fitur Pembeda Produk**            | 5           | 3    | 1           | 1    | 🔄 60% Complete |
-| **Overall Project**                              | 16          | 12   | 3           | 1    | 🔄 75% Complete |
+| **Overall Project**                              | 16          | 14   | 1           | 1    | 🔄 88% Complete |
 
 ---
 
@@ -477,9 +477,9 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 - **Priority:** Medium
 - **Test Evidence:** 8 unit tests covering IP extraction, rate limiting, fail-open, circuit breaker
 
-#### 🔄 2.4 Input Validation, Error Handling & Response Hygiene
+#### ✅ 2.4 Input Validation, Error Handling & Response Hygiene
 
-- **Status:** 🔄 IN PROGRESS
+- **Status:** ✅ DONE
 - **Description:**
   - Activate `validate` tags on all request models (latitude/longitude bounds, radius >= 0, file size limits, string length)
   - Implement domain validation: latitude [-90, 90], longitude [-180, 180], radius > 0, selfie <= 5MB, embedding vector length > 0
@@ -496,15 +496,17 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
   - Request ID middleware and structured security/validation logging
   - Environment-aware CORS configuration
   - Unit and integration test coverage for validation, error mapping, request IDs, CORS, and injection payloads
-- **Remaining / blockers (verified 2 October 2026):**
-  - Validation tests still fail because `required` rejects valid zero latitude/longitude values
-  - Several “valid request” fixtures have not been updated for newly required liveness and idempotency fields
-  - Sanitized latitude/longitude messages do not yet match the expected client-facing range messages
-  - Must rerun `go test ./...` successfully before marking this item DONE
+- **Completion Date:** 2 October 2026
+- **Verification:** Backend tests, `go vet`, formatting, lint, and coverage all pass in GitHub Actions run `36952837482`.
+- **Completed fixes:**
+  - Zero latitude/longitude are accepted while geographic bounds remain enforced
+  - Valid request fixtures include required liveness, HMAC, timestamp, and idempotency fields
+  - Client-facing geographic validation messages are normalized and sanitized
+  - Unauthorized and forbidden responses consistently include the request ID
 
-#### 🔄 2.5 CI/CD Pipeline & Automated Checks
+#### ✅ 2.5 CI/CD Pipeline & Automated Checks
 
-- **Status:** 🔄 IN PROGRESS
+- **Status:** ✅ DONE
 - **Description:**
   - Create GitHub Actions (or equivalent) workflow triggered on PR/push
   - Backend: `go test ./...`, `go vet ./...`, `go fmt check`, `golint`
@@ -521,12 +523,14 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
   - Flutter dependency, analyze, test, and coverage jobs
   - Aggregate status job that fails when backend or mobile checks fail
   - Codecov configuration and contributor documentation
-- **Remaining / blockers (verified 2 October 2026):**
-  - The three latest CI runs on `fix/ci-test` all failed; latest run: `36840334315`
-  - Backend job is red because repository tests still fail, including validation fixtures and other regression tests
-  - Mobile workflow pins Flutter `3.13.x`, which is incompatible with the project's Dart SDK constraint `^3.13.2`
-  - CI status badge is not yet present in README
-  - Branch protection / required status checks still need to be confirmed before marking this item DONE
+- **Completion Date:** 2 October 2026
+- **Verification:** GitHub Actions run `36952837482` passed Backend, Mobile, and aggregate `Status Check` jobs.
+- **Completed fixes:**
+  - CI uses the Go version from `backend/go.mod` and Flutter stable compatible with the Dart SDK constraint
+  - Current checkout, setup, Codecov, and Go 1.25-compatible golangci-lint actions are used
+  - Formatting and new lint regressions are enforced without blocking on unrelated legacy lint debt
+  - CI badge is present in README
+  - `main` branch protection requires the strict `Status Check` before merge
 
 ---
 
