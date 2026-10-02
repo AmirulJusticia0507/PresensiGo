@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -83,8 +84,7 @@ func (rl *RateLimiter) RateLimitMiddleware(endpoint string) func(http.Handler) h
 				} else {
 					// Fail closed
 					log.Printf("❌ Rate limit check failed (fail-closed), blocking request from %s: %v", clientIP, err)
-					w.Header().Set("Content-Type", "application/json")
-					http.Error(w, `{"error": "service unavailable"}`, http.StatusServiceUnavailable)
+					writeRateLimitError(w, r, http.StatusServiceUnavailable, "service unavailable")
 					return
 				}
 			}
@@ -102,14 +102,27 @@ func (rl *RateLimiter) RateLimitMiddleware(endpoint string) func(http.Handler) h
 			if count > config.Limit {
 				log.Printf("⚠️  Rate limit exceeded: %s from %s (endpoint: %s, limit: %d, attempt: %d)",
 					r.RequestURI, clientIP, endpoint, config.Limit, count)
-				w.Header().Set("Content-Type", "application/json")
-				http.Error(w, `{"error": "too many requests"}`, http.StatusTooManyRequests)
+				writeRateLimitError(w, r, http.StatusTooManyRequests, "too many requests")
 				return
 			}
 
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// writeRateLimitError sends a rate limit error as JSON. http.Error is not used
+// because it overwrites Content-Type with text/plain.
+func writeRateLimitError(w http.ResponseWriter, r *http.Request, status int, message string) {
+	requestID := GetRequestID(r.Context())
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]any{
+		"error":     message,
+		"requestID": requestID,
+		"status":    status,
+	})
 }
 
 // checkRateLimit increments the counter in Redis and returns the current count

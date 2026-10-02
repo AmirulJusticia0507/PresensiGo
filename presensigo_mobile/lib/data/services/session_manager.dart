@@ -11,6 +11,16 @@ class SessionManager {
     _secureStorage = SecureStorageService();
   }
 
+  /// Get the current JWT token
+  Future<String?> getToken() async {
+    return await _secureStorage.getToken();
+  }
+
+  /// Persist a newly issued JWT (e.g. after login or registration).
+  Future<void> saveToken(String token) async {
+    await _secureStorage.saveToken(token);
+  }
+
   /// Check if session is still valid (token exists and not expired)
   /// Returns true only if token exists and is not expired (with 60s buffer)
   Future<bool> isSessionValid() async {

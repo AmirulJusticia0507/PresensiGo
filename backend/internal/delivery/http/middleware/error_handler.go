@@ -61,10 +61,10 @@ func (e ServerError) Error() string {
 
 // ErrorResponse represents a standardized error response
 type ErrorResponse struct {
-	Error     string   `json:"error"`
-	Details   []string `json:"details,omitempty"`
-	RequestID string   `json:"requestID"`
-	StatusCode int     `json:"statusCode"`
+	Error      string   `json:"error"`
+	Details    []string `json:"details,omitempty"`
+	RequestID  string   `json:"requestID"`
+	StatusCode int      `json:"statusCode"`
 }
 
 // HandleError sanitizes an error and sends a standardized JSON response
@@ -144,9 +144,9 @@ func classifyAndSanitizeError(err error) (int, string, []string) {
 	}
 
 	// Check for JSON/parsing errors
-	if strings.Contains(errorMsg, "invalid character") || 
-	   strings.Contains(errorMsg, "Unmarshal") || 
-	   strings.Contains(errorMsg, "json") {
+	if strings.Contains(errorMsg, "invalid character") ||
+		strings.Contains(errorMsg, "Unmarshal") ||
+		strings.Contains(errorMsg, "json") {
 		return http.StatusBadRequest, "Invalid request format", nil
 	}
 

@@ -1,0 +1,659 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Add fields to User model: phone, emergencyContact (name+phone), address, profilePictureUrl, termsAcceptedAt": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905983285
+      }
+    ],
+    "1.2 Create validation helper functions: ValidateEmail, ValidatePassword, ValidatePhone, ValidateName, HashPassword, VerifyPassword": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905983567
+      }
+    ],
+    "1.3 Create ProfileUsecaseIface interface with methods: RegisterUser, GetUserProfile, UpdateUserProfile, ChangePassword": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905983641
+      }
+    ],
+    "1.4 Implement ProfileUsecase struct with userRepo dependency injection": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905983736
+      }
+    ],
+    "1.5 Implement RegisterUser method: validate fields, check email uniqueness, hash password, create user, return JWT": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905983837
+      }
+    ],
+    "1.6 Implement GetUserProfile method: fetch user by ID, return sanitized object": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905983890
+      }
+    ],
+    "1.7 Implement UpdateUserProfile method: validate fields, update atomically, return updated user": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905983939
+      }
+    ],
+    "1.8 Implement ChangePassword method: verify current password, hash new password, update in DB": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905983979
+      }
+    ],
+    "2.1 Add GetUserByEmail method to UserRepository": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984065
+      }
+    ],
+    "2.2 Add CreateUser method with all fields (email, name, phone, password_hash, etc.)": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984117
+      }
+    ],
+    "2.3 Add UpdateUser method for profile updates": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984171
+      }
+    ],
+    "2.4 Add UpdatePassword method for password changes": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984212
+      }
+    ],
+    "2.5 Ensure email index exists in database for uniqueness check": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984253
+      }
+    ],
+    "2.6 Add database migration for new user fields (phone, emergency_contact_*, address, profile_picture_url)": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984293
+      }
+    ],
+    "2.7 Test repo methods with test database": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984339
+      }
+    ],
+    "3.1 Create Register handler: POST `/api/auth/register`, accept email/password/confirmPassword/name/phone/termsAccepted": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984386
+      }
+    ],
+    "3.2 Validate request in handler: use validation middleware": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984441
+      }
+    ],
+    "3.3 Call ProfileUsecase.RegisterUser": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984540
+      }
+    ],
+    "3.4 Return 201 Created with JWT token and user object": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984589
+      }
+    ],
+    "3.5 Handle errors: 400 validation, 409 duplicate email, 500 server errors": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984643
+      }
+    ],
+    "3.6 Enhance existing GetProfile handler: return complete user object with all fields": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984688
+      }
+    ],
+    "3.7 Create UpdateProfile handler: PUT `/api/profile`, require auth middleware": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984735
+      }
+    ],
+    "3.8 Validate request fields, call ProfileUsecase.UpdateUserProfile": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984774
+      }
+    ],
+    "3.9 Return 200 OK with updated user object or 400/401 on error": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984812
+      }
+    ],
+    "3.10 Wire handlers to routes in main.go (apply rate limiting for register)": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984852
+      }
+    ],
+    "4.1 Create ChangePassword handler: PUT `/api/profile/password`, require auth": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984931
+      }
+    ],
+    "4.2 Accept currentPassword, newPassword, confirmPassword": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905984974
+      }
+    ],
+    "4.3 Validate new password meets strength requirements (8+, upper, lower, digit, special)": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985011
+      }
+    ],
+    "4.4 Validate confirmation matches new password": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985050
+      }
+    ],
+    "4.5 Call ProfileUsecase.ChangePassword with current password verification": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985090
+      }
+    ],
+    "4.6 Return 200 OK with success message or 400/401 on error": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985127
+      }
+    ],
+    "4.7 Wire handler to route with auth middleware": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985167
+      }
+    ],
+    "4.8 Return generic error messages (don't reveal if current password wrong vs new password weak)": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985203
+      }
+    ],
+    "5.1 Create RegisterScreen widget: `presensigo_mobile/lib/features/auth/screens/register_screen.dart`": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985241
+      }
+    ],
+    "5.2 Design form with TextFormFields: email, password, confirmPassword, name, phone": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985280
+      }
+    ],
+    "5.3 Add CheckboxListTile for terms acceptance": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985317
+      }
+    ],
+    "5.4 Implement real-time email validation with visual feedback": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985395
+      }
+    ],
+    "5.5 Implement password strength indicator (show requirements: 8+, upper, lower, digit, special)": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985435
+      }
+    ],
+    "5.6 Implement confirm password validation (must match)": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985473
+      }
+    ],
+    "5.7 Implement phone validation (optional, E.164 format)": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985512
+      }
+    ],
+    "5.8 Implement name validation (2-255 characters)": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985550
+      }
+    ],
+    "5.9 Disable Register button until all validations pass": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985586
+      }
+    ],
+    "5.10 Call ProfileService.register on Register button tap": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985629
+      }
+    ],
+    "5.11 Show loading indicator during registration": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985677
+      }
+    ],
+    "5.12 Handle errors: show field-level errors from API, show 409 duplicate email error": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985725
+      }
+    ],
+    "5.13 Store JWT token in SharedPreferences on success": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985772
+      }
+    ],
+    "5.14 Navigate to ProfileScreen after successful registration": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985839
+      }
+    ],
+    "6.1 Create ProfileScreen widget: `presensigo_mobile/lib/features/profile/screens/profile_screen.dart`": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985893
+      }
+    ],
+    "6.2 Create ProfileService API client: `presensigo_mobile/lib/data/services/profile_service.dart`": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985931
+      }
+    ],
+    "6.3 Create FormValidator helper: `presensigo_mobile/lib/core/utils/form_validator.dart`": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905985972
+      }
+    ],
+    "6.4 Implement ProfileService.getProfile() method: GET `/api/profile`, cache in SharedPreferences": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986012
+      }
+    ],
+    "6.5 Implement ProfileService.updateProfile() method: PUT `/api/profile` with edited fields": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986053
+      }
+    ],
+    "6.6 Implement ProfileService.changePassword() method: PUT `/api/profile/password`": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986092
+      }
+    ],
+    "6.7 Design ProfileScreen with read-only display: name, email, phone, emergency contact, address": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986145
+      }
+    ],
+    "6.8 Load profile on screen open, show loading state": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986193
+      }
+    ],
+    "6.9 Add Edit button (pencil icon) to enter edit mode": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986241
+      }
+    ],
+    "6.10 Edit mode: populate form from cached data, enable input fields": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986286
+      }
+    ],
+    "6.11 Edit mode: real-time validation for each field": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986330
+      }
+    ],
+    "6.12 Edit mode: Save button (submit PUT request), Cancel button (discard changes)": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986376
+      }
+    ],
+    "6.13 Add \"Change Password\" button → show dialog with current, new, confirm password fields": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986423
+      }
+    ],
+    "6.14 Password change dialog: validate strength, match confirmation, call updatePassword": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986472
+      }
+    ],
+    "6.15 Handle all errors: show field-level errors, show generic messages for auth errors": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986523
+      }
+    ],
+    "6.16 Implement pull-to-refresh to reload profile": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986584
+      }
+    ],
+    "6.17 FormValidator: validateEmail, validatePassword, validatePhone, validateName, validateEmergencyContact, validateAddress": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986641
+      }
+    ],
+    "7.1 Write unit tests for validation functions: ValidateEmail (valid/invalid formats), ValidatePassword (strength check), ValidatePhone (format check), ValidateName (length check)": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986693
+      }
+    ],
+    "7.2 Write unit tests for password hashing: HashPassword creates hash, VerifyPassword checks correctly, wrong password fails": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986741
+      }
+    ],
+    "7.3 Write unit tests for ProfileUsecase methods with mock repository": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986833
+      }
+    ],
+    "7.4 Write integration tests for POST `/api/auth/register`: success with all fields, 400 validation errors, 409 duplicate email": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986874
+      }
+    ],
+    "7.5 Write integration tests for GET `/api/profile`: success returns user, 401 without token, 404 user not found": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986921
+      }
+    ],
+    "7.6 Write integration tests for PUT `/api/profile`: success updates fields, 400 validation, 401 without token": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905986960
+      }
+    ],
+    "7.7 Write integration tests for PUT `/api/profile/password`: success, wrong current password (401), weak new password (400)": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905987004
+      }
+    ],
+    "7.8 Write integration tests for rate limiting: register endpoint returns 429 after 3 requests in 1 minute": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905987045
+      }
+    ],
+    "7.9 Run all tests: `go test ./... -v` from backend directory": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905987088
+      }
+    ],
+    "7.10 Run linter: `go vet ./...` and `go fmt` check": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905987135
+      }
+    ],
+    "8.1 Write unit tests for FormValidator: ValidateEmail, ValidatePassword, ValidatePhone, ValidateName (valid/invalid cases)": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905987188
+      }
+    ],
+    "8.2 Write widget tests for RegisterScreen: form displays, validation feedback shows, button disabled until valid, loading state": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905987239
+      }
+    ],
+    "8.3 Write widget tests for ProfileScreen: profile loads, edit mode works, save/cancel buttons, password change dialog": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905987291
+      }
+    ],
+    "8.4 Write unit tests for ProfileService: mock HTTP, test getProfile, updateProfile, changePassword success and errors": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905987338
+      }
+    ],
+    "8.5 Manual testing: register new user (valid and invalid inputs), log in, view profile, edit fields, change password": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905987383
+      }
+    ],
+    "8.6 Manual testing: verify API errors show correctly (field-level for 400, generic for 401/409)": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905987435
+      }
+    ],
+    "8.7 Manual testing: verify no crashes on network errors or 500 server errors": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905987480
+      }
+    ],
+    "8.8 Build verification: `flutter build apk --debug` or `flutter build ios` (or run on emulator)": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905987520
+      }
+    ],
+    "8.9 Run linter: `flutter analyze` (no errors, minimal warnings)": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905987559
+      }
+    ],
+    "8.10 Commit all changes: stage files, write commit message, push to branch": [
+      {
+        "executionId": "3e1efb1a-6864-4a87-94e3-1ffd73680534",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790905987604
+      }
+    ],
+    "1. Enhance User Model and Create ProfileService Usecase": [
+      {
+        "executionId": "cb32c3f1-2a5e-4e4f-a158-dd050701958f",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790911605736
+      }
+    ],
+    "2. Enhance User Repository with Profile Methods": [
+      {
+        "executionId": "cb32c3f1-2a5e-4e4f-a158-dd050701958f",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790911606079
+      }
+    ],
+    "3. Implement Backend Register and Profile Endpoints": [
+      {
+        "executionId": "cb32c3f1-2a5e-4e4f-a158-dd050701958f",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790911606538
+      }
+    ],
+    "4. Implement Password Change Endpoint": [
+      {
+        "executionId": "cb32c3f1-2a5e-4e4f-a158-dd050701958f",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790911606704
+      }
+    ],
+    "5. Implement Mobile RegisterScreen": [
+      {
+        "executionId": "cb32c3f1-2a5e-4e4f-a158-dd050701958f",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790911616973
+      },
+      {
+        "executionId": "cb32c3f1-2a5e-4e4f-a158-dd050701958f",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790912068373
+      }
+    ],
+    "6. Implement Mobile ProfileScreen and ProfileService": [
+      {
+        "executionId": "cb32c3f1-2a5e-4e4f-a158-dd050701958f",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790911617075
+      },
+      {
+        "executionId": "cb32c3f1-2a5e-4e4f-a158-dd050701958f",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790912068290
+      }
+    ],
+    "7. Write Backend Tests (Unit + Integration)": [
+      {
+        "executionId": "cb32c3f1-2a5e-4e4f-a158-dd050701958f",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790912079689
+      }
+    ],
+    "8. Write Mobile Tests and Final Verification": [
+      {
+        "executionId": "cb32c3f1-2a5e-4e4f-a158-dd050701958f",
+        "chatSessionId": "sess_f0bc66c4-7bc3-4531-be2b-91baef787930",
+        "timestamp": 1790912079794
+      }
+    ]
+  }
+}

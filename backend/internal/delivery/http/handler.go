@@ -14,6 +14,8 @@ import (
 
 	"github.com/PresensiGo/backend/internal/delivery/http/middleware"
 	"github.com/PresensiGo/backend/internal/model"
+	"github.com/PresensiGo/backend/internal/repository"
+	"github.com/PresensiGo/backend/internal/usecase"
 )
 
 // AuthUsecaseIface defines the auth operations required by the HTTP handler.
@@ -40,6 +42,14 @@ type AttendanceUsecaseIface interface {
 	GetSyncStatus(userID uuid.UUID) (*model.SyncStatusResponse, error)
 }
 
+// ProfileUsecaseIface defines the profile operations required by the HTTP handler.
+type ProfileUsecaseIface interface {
+	RegisterUser(ctx context.Context, req *usecase.RegisterUserRequest) (*model.User, string, error)
+	GetUserProfile(ctx context.Context, userID uuid.UUID) (*model.User, error)
+	UpdateUserProfile(ctx context.Context, userID uuid.UUID, req *usecase.UpdateProfileRequest) (*model.User, error)
+	ChangePassword(ctx context.Context, userID uuid.UUID, req *usecase.ChangePasswordRequest) error
+}
+
 // RedisClientIface defines the Redis operations required by the HTTP handler.
 type RedisClientIface interface {
 	IsConnected(ctx context.Context) bool
@@ -56,17 +66,22 @@ type DBPinger interface {
 type Handler struct {
 	authUc      AuthUsecaseIface
 	attUc       AttendanceUsecaseIface
+	profileUc   ProfileUsecaseIface
 	db          DBPinger
 	redisClient RedisClientIface
+	fraudRepo   *repository.FraudAttemptRepository
 }
 
-func NewHandler(authUc AuthUsecaseIface, attUc AttendanceUsecaseIface, dependencies ...any) *Handler {
-	handler := &Handler{authUc: authUc, attUc: attUc}
+func NewHandler(authUc AuthUsecaseIface, attUc AttendanceUsecaseIface, profileUc ProfileUsecaseIface, dependencies ...any) *Handler {
+	handler := &Handler{authUc: authUc, attUc: attUc, profileUc: profileUc}
 	if len(dependencies) > 0 {
 		handler.db, _ = dependencies[0].(DBPinger)
 	}
 	if len(dependencies) > 1 {
 		handler.redisClient, _ = dependencies[1].(RedisClientIface)
+	}
+	if len(dependencies) > 2 {
+		handler.fraudRepo, _ = dependencies[2].(*repository.FraudAttemptRepository)
 	}
 	return handler
 }
@@ -165,25 +180,95 @@ func (h *Handler) RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/api/profile", h.GetProfile).Methods("GET")
 	r.HandleFunc("/api/profile/face-enrollment", h.EnrollFace).Methods("POST")
 	r.HandleFunc("/api/face/challenge", h.GetFaceChallenge).Methods("POST")
+	r.HandleFunc("/api/security/location-attempts", h.ReportFraudAttempt).Methods("POST")
+	r.HandleFunc("/api/admin/security/location-alerts", h.GetFraudAlerts).Methods("GET")
+}
+
+const repeatedFraudThreshold = 3
+
+func (h *Handler) ReportFraudAttempt(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserIDFromContext(r.Context())
+	if userID == uuid.Nil {
+		respondError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if h.fraudRepo == nil {
+		respondError(w, http.StatusServiceUnavailable, "fraud reporting unavailable")
+		return
+	}
+	var req model.FraudAttemptRequest
+	if err := validateRequest(w, r, &req); err != nil {
+		return
+	}
+	attempt, err := h.fraudRepo.Create(userID, &req)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to record attempt")
+		return
+	}
+	count, err := h.fraudRepo.CountRecent(userID)
+	if err != nil {
+		log.Printf("failed to count fraud attempts for user %s: %v", userID, err)
+	}
+	if count >= repeatedFraudThreshold {
+		log.Printf("SECURITY ALERT: user %s has %d rejected location attempts in 24 hours", userID, count)
+	}
+	respondJSON(w, http.StatusCreated, map[string]interface{}{"attempt": attempt, "alerted": count >= repeatedFraudThreshold})
+}
+
+func (h *Handler) GetFraudAlerts(w http.ResponseWriter, r *http.Request) {
+	if middleware.GetRoleFromContext(r.Context()) != "admin" {
+		respondError(w, http.StatusForbidden, "admin access required")
+		return
+	}
+	if h.fraudRepo == nil {
+		respondError(w, http.StatusServiceUnavailable, "fraud alerts unavailable")
+		return
+	}
+	limit := 100
+	if raw := r.URL.Query().Get("limit"); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 && parsed <= 500 {
+			limit = parsed
+		}
+	}
+	alerts, err := h.fraudRepo.ListAlerts(limit, repeatedFraudThreshold)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to load fraud alerts")
+		return
+	}
+	respondJSON(w, http.StatusOK, alerts)
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetRequestID(r.Context())
-	var req model.RegisterRequest
+	var req usecase.RegisterUserRequest
 	if err := validateRequest(w, r, &req); err != nil {
 		return
 	}
 
-	user, err := h.authUc.Register(&req)
+	user, token, err := h.profileUc.RegisterUser(r.Context(), &req)
 	if err != nil {
 		log.Printf("[%s] Registration failed for email %s: %v", requestID, req.Email, err)
-		respondError(w, http.StatusBadRequest, err.Error())
+
+		switch err.Error() {
+		case usecase.ErrEmailAlreadyExists:
+			respondError(w, http.StatusConflict, err.Error(), requestID)
+		case usecase.ErrWeakPassword,
+			usecase.ErrPasswordMismatch,
+			usecase.ErrInvalidEmailFormat,
+			usecase.ErrInvalidPhone,
+			usecase.ErrInvalidName,
+			usecase.ErrTermsNotAccepted:
+			respondValidationError(w, r.Context(), err.Error(), nil)
+		default:
+			respondError(w, http.StatusInternalServerError, "failed to register user", requestID)
+		}
 		return
 	}
 
 	log.Printf("[%s] Registration successful for user %s", requestID, user.ID)
 	respondJSON(w, http.StatusCreated, map[string]interface{}{
 		"message": "registration successful",
+		"token":   token,
 		"user":    user,
 	})
 }
@@ -353,7 +438,7 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.authUc.GetByID(userID)
+	user, err := h.profileUc.GetUserProfile(r.Context(), userID)
 	if err != nil {
 		log.Printf("[%s] GetProfile failed for user %s: %v", requestID, userID, err)
 		respondError(w, http.StatusNotFound, "user not found")
@@ -366,10 +451,73 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		"email":                     user.Email,
 		"role":                      user.Role,
 		"device_uuid":               user.DeviceUUID,
+		"phone":                     user.Phone,
+		"emergency_contact_name":    user.EmergencyContactName,
+		"emergency_contact_phone":   user.EmergencyContactPhone,
+		"address":                   user.Address,
+		"profile_picture_url":       user.ProfilePictureUrl,
 		"face_enrolled":             len(user.FaceEmbedding) > 0,
 		"face_enrolled_at":          user.FaceEnrolledAt,
 		"face_similarity_threshold": user.FaceSimilarityThreshold,
+		"created_at":                user.CreatedAt,
+		"updated_at":                user.UpdatedAt,
 	})
+}
+
+func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
+	userID := getUserIDFromContext(r)
+	if userID == uuid.Nil {
+		log.Printf("[%s] Unauthorized update-profile attempt", requestID)
+		respondError(w, http.StatusUnauthorized, "unauthorized", requestID)
+		return
+	}
+
+	var req usecase.UpdateProfileRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("[%s] Failed to decode update-profile request: %v", requestID, err)
+		respondValidationError(w, r.Context(), "Invalid request format", nil)
+		return
+	}
+
+	// Call ProfileUsecase to handle update
+	user, err := h.profileUc.UpdateUserProfile(r.Context(), userID, &req)
+	if err != nil {
+		log.Printf("[%s] UpdateProfile failed for user %s: %v", requestID, userID, err)
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	log.Printf("[%s] Profile updated successfully for user %s", requestID, userID)
+	respondJSON(w, http.StatusOK, user)
+}
+
+func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetRequestID(r.Context())
+	userID := getUserIDFromContext(r)
+	if userID == uuid.Nil {
+		log.Printf("[%s] Unauthorized change-password attempt", requestID)
+		respondError(w, http.StatusUnauthorized, "unauthorized", requestID)
+		return
+	}
+
+	var req usecase.ChangePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("[%s] Failed to decode change-password request: %v", requestID, err)
+		respondValidationError(w, r.Context(), "Invalid request format", nil)
+		return
+	}
+
+	// Call ProfileUsecase to handle password change
+	if err := h.profileUc.ChangePassword(r.Context(), userID, &req); err != nil {
+		log.Printf("[%s] ChangePassword failed for user %s: %v", requestID, userID, err)
+		// Use generic error message (don't reveal password-specific details)
+		respondError(w, http.StatusBadRequest, "Invalid credentials")
+		return
+	}
+
+	log.Printf("[%s] Password changed successfully for user %s", requestID, userID)
+	respondJSON(w, http.StatusOK, map[string]string{"message": "password changed successfully"})
 }
 
 func (h *Handler) EnrollFace(w http.ResponseWriter, r *http.Request) {

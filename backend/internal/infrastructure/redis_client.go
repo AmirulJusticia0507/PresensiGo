@@ -11,13 +11,13 @@ import (
 )
 
 type RedisClient struct {
-	client             *redis.Client
-	ctx                context.Context
-	addr               string
-	isConnected        bool
-	mu                 sync.RWMutex
-	reconnectTicker    *time.Ticker
-	stopReconnect      chan bool
+	client          *redis.Client
+	ctx             context.Context
+	addr            string
+	isConnected     bool
+	mu              sync.RWMutex
+	reconnectTicker *time.Ticker
+	stopReconnect   chan bool
 }
 
 // NewRedisClient initializes a Redis client with connection pooling, timeout, and retry logic

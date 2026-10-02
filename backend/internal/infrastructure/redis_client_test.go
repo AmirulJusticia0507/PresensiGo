@@ -93,7 +93,7 @@ func TestConnectionStateOnOperations(t *testing.T) {
 
 	// Try an operation (this will fail if Redis is not running, but the state should still update)
 	_, err := rc.Increment(ctx, "test-key", 1*time.Minute)
-	
+
 	// We only care that the function completes without panicking
 	// The actual success depends on Redis being available
 	_ = err

@@ -26,7 +26,7 @@ func InitJWT(secret string, expireHour int) {
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestID := GetRequestID(r.Context())
-		
+
 		if r.Method == "OPTIONS" {
 			next.ServeHTTP(w, r)
 			return

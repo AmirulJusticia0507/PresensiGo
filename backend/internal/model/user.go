@@ -13,6 +13,12 @@ type User struct {
 	PasswordHash            string     `json:"-" db:"password_hash"`
 	Role                    string     `json:"role" db:"role"`
 	DeviceUUID              *string    `json:"device_uuid,omitempty" db:"device_uuid"`
+	Phone                   *string    `json:"phone,omitempty" db:"phone"`
+	EmergencyContactName    *string    `json:"emergency_contact_name,omitempty" db:"emergency_contact_name"`
+	EmergencyContactPhone   *string    `json:"emergency_contact_phone,omitempty" db:"emergency_contact_phone"`
+	Address                 *string    `json:"address,omitempty" db:"address"`
+	ProfilePictureUrl       *string    `json:"profile_picture_url,omitempty" db:"profile_picture_url"`
+	TermsAcceptedAt         *time.Time `json:"terms_accepted_at,omitempty" db:"terms_accepted_at"`
 	FaceEmbedding           []byte     `json:"-" db:"face_embedding"`
 	FaceSimilarityThreshold float64    `json:"face_similarity_threshold" db:"face_similarity_threshold"`
 	FaceEnrolledAt          *time.Time `json:"face_enrolled_at,omitempty" db:"face_enrolled_at"`

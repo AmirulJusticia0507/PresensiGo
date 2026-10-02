@@ -48,6 +48,7 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	attRepo := repository.NewAttendanceRepository(db)
 	offlineRepo := repository.NewOfflineQueueRepository(db)
+	fraudRepo := repository.NewFraudAttemptRepository(db)
 
 	minioCtx, cancelMinio := context.WithTimeout(context.Background(), 10*time.Second)
 	minioClient, err := storage.NewClient(
@@ -70,8 +71,9 @@ func main() {
 	)
 	authUc := usecase.NewAuthUsecase(userRepo, cfg, faceAI)
 	attUc := usecase.NewAttendanceUsecase(attRepo, userRepo, offlineRepo, cfg, minioClient, faceAI)
+	profileUc := usecase.NewProfileUsecase(userRepo)
 
-	httpHandler := deliveryhttp.NewHandler(authUc, attUc, db, redisClient)
+	httpHandler := deliveryhttp.NewHandler(authUc, attUc, profileUc, db, redisClient, fraudRepo)
 
 	middleware.InitJWT(cfg.JWT.Secret, cfg.JWT.ExpireHour)
 
@@ -121,8 +123,16 @@ func main() {
 	defaultLimitRouter.HandleFunc("/api/locations/{id}", httpHandler.UpdateLocation).Methods("PUT")
 	defaultLimitRouter.HandleFunc("/api/locations/{id}", httpHandler.DeleteLocation).Methods("DELETE")
 	defaultLimitRouter.HandleFunc("/api/profile", httpHandler.GetProfile).Methods("GET")
+	defaultLimitRouter.HandleFunc("/api/profile", httpHandler.UpdateProfile).Methods("PUT")
 	defaultLimitRouter.HandleFunc("/api/profile/face-enrollment", httpHandler.EnrollFace).Methods("POST")
 	defaultLimitRouter.HandleFunc("/api/face/challenge", httpHandler.GetFaceChallenge).Methods("POST")
+	defaultLimitRouter.HandleFunc("/api/security/location-attempts", httpHandler.ReportFraudAttempt).Methods("POST")
+	defaultLimitRouter.HandleFunc("/api/admin/security/location-alerts", httpHandler.GetFraudAlerts).Methods("GET")
+
+	// Password change with stricter rate limit
+	passwordLimitRouter := protectedRouter.NewRoute().Subrouter()
+	passwordLimitRouter.Use(rateLimiter.RateLimitMiddleware("password_change"))
+	passwordLimitRouter.HandleFunc("/api/profile/password", httpHandler.ChangePassword).Methods("PUT")
 
 	port := cfg.Server.Port
 	if port == "" {
