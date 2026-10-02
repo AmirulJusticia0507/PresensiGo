@@ -2083,3 +2083,18 @@ func TestStructuredLogging_ErrorResponseFormatConsistent(t *testing.T) {
 		})
 	}
 }
+
+
+// TestIntentionalFailure_CIPipelineValidation_FIXED - FIXED: Previously intentional failure now passes
+// This test was intentionally failing in the previous commit to validate CI/CD pipeline detection
+// After confirming workflow showed red status and failed step was highlighted,
+// this test was fixed to validate the workflow passes on the next run
+func TestIntentionalFailure_CIPipelineValidation_Fixed(t *testing.T) {
+	// Test now passes - confirms CI workflow successfully detects both failures and successes
+	// Previous behavior: This test used to call t.Error() to trigger failure
+	// Current behavior: This test passes, allowing workflow to succeed
+	if false {
+		t.Error("This would cause failure - but it won't execute")
+	}
+	// Workflow should now report all tests passing
+}

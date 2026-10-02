@@ -3,15 +3,16 @@ import 'package:presensigo_app/data/services/session_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('SessionManager', () {
     late SessionManager sessionManager;
 
-    setUp(() {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
       sessionManager = SessionManager();
-      // Clear SharedPreferences before each test
-      SharedPreferences.getInstance().then((prefs) {
-        prefs.clear();
-      });
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
     });
 
     test('isSessionValid returns false when token is missing', () async {
@@ -19,13 +20,15 @@ void main() {
       expect(isValid, false);
     });
 
-    test('isSessionValid returns false for malformed token (not 3 parts)',
-        () async {
-      // Even without setting a valid token, the method should safely handle
-      // missing tokens and return false
-      final isValid = await sessionManager.isSessionValid();
-      expect(isValid, false);
-    });
+    test(
+      'isSessionValid returns false for malformed token (not 3 parts)',
+      () async {
+        // Even without setting a valid token, the method should safely handle
+        // missing tokens and return false
+        final isValid = await sessionManager.isSessionValid();
+        expect(isValid, false);
+      },
+    );
 
     test('logout clears all session state', () async {
       await sessionManager.logout();
@@ -53,4 +56,3 @@ void main() {
     });
   });
 }
-

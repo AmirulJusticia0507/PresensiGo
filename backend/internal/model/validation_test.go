@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 )
 
 var v = validator.New()
@@ -235,11 +236,14 @@ func TestCreateLocationRequest_RadiusLarge(t *testing.T) {
 // TestCheckInRequest_ValidInput verifies valid check-in request passes validation
 func TestCheckInRequest_ValidInput(t *testing.T) {
 	req := CheckInRequest{
-		Latitude:   6.2,
-		Longitude:  106.8,
-		DeviceUUID: "123e4567-e89b-12d3-a456-426614174000",
-		Timestamp:  1234567890,
-		HMACSig:    "signature_data",
+		Latitude:          6.2,
+		Longitude:         106.8,
+		DeviceUUID:        "123e4567-e89b-12d3-a456-426614174000",
+		Timestamp:         1234567890,
+		HMACSig:           "signature_data",
+		LivenessChallenge: "turn_left",
+		LivenessToken:     "signed-token",
+		IdempotencyKey:    uuid.New(),
 	}
 
 	if err := v.Struct(req); err != nil {
@@ -250,11 +254,12 @@ func TestCheckInRequest_ValidInput(t *testing.T) {
 // TestCheckInRequest_LatitudeOutOfRange verifies latitude validation in check-in
 func TestCheckInRequest_LatitudeOutOfRange(t *testing.T) {
 	req := CheckInRequest{
-		Latitude:   100,
-		Longitude:  106.8,
-		DeviceUUID: "123e4567-e89b-12d3-a456-426614174000",
-		Timestamp:  1234567890,
-		HMACSig:    "signature_data",
+		Latitude:       100,
+		Longitude:      106.8,
+		DeviceUUID:     "123e4567-e89b-12d3-a456-426614174000",
+		Timestamp:      1234567890,
+		HMACSig:        "signature_data",
+		IdempotencyKey: uuid.New(),
 	}
 
 	if err := v.Struct(req); err == nil {
@@ -265,11 +270,12 @@ func TestCheckInRequest_LatitudeOutOfRange(t *testing.T) {
 // TestCheckInRequest_InvalidDeviceUUID verifies UUID validation
 func TestCheckInRequest_InvalidDeviceUUID(t *testing.T) {
 	req := CheckInRequest{
-		Latitude:   6.2,
-		Longitude:  106.8,
-		DeviceUUID: "not-a-uuid",
-		Timestamp:  1234567890,
-		HMACSig:    "signature_data",
+		Latitude:       6.2,
+		Longitude:      106.8,
+		DeviceUUID:     "not-a-uuid",
+		Timestamp:      1234567890,
+		HMACSig:        "signature_data",
+		IdempotencyKey: uuid.New(),
 	}
 
 	if err := v.Struct(req); err == nil {
@@ -414,11 +420,12 @@ func TestUpdateEmbeddingRequest_ManyElements(t *testing.T) {
 // TestCheckOutRequest_ValidInput verifies valid check-out request passes validation
 func TestCheckOutRequest_ValidInput(t *testing.T) {
 	req := CheckOutRequest{
-		Latitude:   6.2,
-		Longitude:  106.8,
-		DeviceUUID: "123e4567-e89b-12d3-a456-426614174000",
-		Timestamp:  1234567890,
-		HMACSig:    "signature_data",
+		Latitude:       6.2,
+		Longitude:      106.8,
+		DeviceUUID:     "123e4567-e89b-12d3-a456-426614174000",
+		Timestamp:      1234567890,
+		HMACSig:        "signature_data",
+		IdempotencyKey: uuid.New(),
 	}
 
 	if err := v.Struct(req); err != nil {

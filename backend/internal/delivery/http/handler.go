@@ -444,15 +444,19 @@ func (h *Handler) CreateLocation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req model.Location
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("[%s] Failed to decode create-location request: %v", requestID, err)
-		respondError(w, http.StatusBadRequest, "invalid request body")
+	var input model.CreateLocationRequest
+	if err := validateRequest(w, r, &input); err != nil {
 		return
 	}
 
-	// Generate server-side UUID
-	req.ID = uuid.New()
+	req := model.Location{
+		ID:           uuid.New(),
+		Name:         input.Name,
+		Address:      input.Address,
+		Latitude:     input.Latitude,
+		Longitude:    input.Longitude,
+		RadiusMeters: input.RadiusMeters,
+	}
 
 	if err := h.attUc.CreateLocation(&req); err != nil {
 		log.Printf("[%s] CreateLocation failed: %v", requestID, err)

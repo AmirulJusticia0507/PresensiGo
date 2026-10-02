@@ -65,9 +65,9 @@ func TestHaversine(t *testing.T) {
 
 func TestImplausibleTravelSpeedKmh(t *testing.T) {
 	t.Run("reports high speed for teleport", func(t *testing.T) {
-		oneHourAgo := time.Now().Add(-time.Hour)
+		fiveMinutesAgo := time.Now().Add(-5 * time.Minute)
 		previous := &model.Attendance{
-			CheckOutTime:     &oneHourAgo,
+			CheckOutTime:     &fiveMinutesAgo,
 			CheckOutLocation: []float64{-6.2088, 106.8456},
 		}
 		speed, ok := implausibleTravelSpeedKmh(previous, -6.9175, 107.6191)
@@ -110,9 +110,9 @@ func TestImplausibleTravelSpeedKmh(t *testing.T) {
 	})
 
 	t.Run("skips for non-positive time delta", func(t *testing.T) {
-		now := time.Now()
+		future := time.Now().Add(time.Minute)
 		previous := &model.Attendance{
-			CheckOutTime:     &now,
+			CheckOutTime:     &future,
 			CheckOutLocation: []float64{-6.2088, 106.8456},
 		}
 		if _, ok := implausibleTravelSpeedKmh(previous, -6.9175, 107.6191); ok {

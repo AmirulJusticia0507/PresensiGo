@@ -41,9 +41,9 @@ type Location struct {
 
 type CheckInRequest struct {
 	// Latitude in decimal degrees, range: -90 to 90
-	Latitude float64 `json:"latitude" validate:"required,min=-90,max=90"`
+	Latitude float64 `json:"latitude" validate:"gte=-90,lte=90"`
 	// Longitude in decimal degrees, range: -180 to 180
-	Longitude float64 `json:"longitude" validate:"required,min=-180,max=180"`
+	Longitude float64 `json:"longitude" validate:"gte=-180,lte=180"`
 	// DeviceUUID must be a valid UUID
 	DeviceUUID string `json:"device_uuid" validate:"required,uuid"`
 	// Timestamp in seconds since epoch
@@ -66,9 +66,9 @@ type FaceChallengeResponse struct {
 
 type CheckOutRequest struct {
 	// Latitude in decimal degrees, range: -90 to 90
-	Latitude float64 `json:"latitude" validate:"required,min=-90,max=90"`
+	Latitude float64 `json:"latitude" validate:"gte=-90,lte=90"`
 	// Longitude in decimal degrees, range: -180 to 180
-	Longitude float64 `json:"longitude" validate:"required,min=-180,max=180"`
+	Longitude float64 `json:"longitude" validate:"gte=-180,lte=180"`
 	// DeviceUUID must be a valid UUID
 	DeviceUUID string `json:"device_uuid" validate:"required,uuid"`
 	// Timestamp in seconds since epoch
@@ -137,9 +137,9 @@ type CreateLocationRequest struct {
 	// Optional address description
 	Address *string `json:"address,omitempty" validate:"omitempty,max=500"`
 	// Latitude in decimal degrees, range: -90 to 90
-	Latitude float64 `json:"latitude" validate:"required,min=-90,max=90"`
+	Latitude float64 `json:"latitude" validate:"gte=-90,lte=90"`
 	// Longitude in decimal degrees, range: -180 to 180
-	Longitude float64 `json:"longitude" validate:"required,min=-180,max=180"`
+	Longitude float64 `json:"longitude" validate:"gte=-180,lte=180"`
 	// Radius in meters, must be greater than 0
 	RadiusMeters int `json:"radius_meters" validate:"required,gt=0"`
 }
