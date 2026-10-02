@@ -1,5 +1,6 @@
 # Binaries
 *.exe
+**/build/
 *.exe~
 *.dll
 *.so
@@ -10,6 +11,8 @@
 
 # Output of go coverage
 *.out
+*.cov
+coverage
 
 # Dependency directories
 vendor/

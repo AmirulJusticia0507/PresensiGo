@@ -55,7 +55,7 @@ func (r *AdminRepository) ListAttendances(ctx context.Context, filter model.Atte
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := make([]model.AttendanceListItem, 0)
 	for rows.Next() {
 		var item model.AttendanceListItem
@@ -75,7 +75,7 @@ func (r *AdminRepository) ListUsers(ctx context.Context) ([]model.User, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	users := make([]model.User, 0)
 	for rows.Next() {
 		var u model.User
@@ -129,7 +129,7 @@ func (r *AdminRepository) ListSchedules(ctx context.Context) ([]model.WorkSchedu
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := make([]model.WorkSchedule, 0)
 	for rows.Next() {
 		var s model.WorkSchedule
@@ -163,7 +163,7 @@ func (r *AdminRepository) ListLeaves(ctx context.Context, userID *uuid.UUID) ([]
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := make([]model.LeaveRequest, 0)
 	for rows.Next() {
 		var item model.LeaveRequest

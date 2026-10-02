@@ -1,6 +1,11 @@
 class ApiConstants {
   /// Base URL including the `/api` prefix, so paths below are appended directly.
-  static const String baseUrl = 'http://localhost:8080/api';
+  /// Override per build with:
+  /// `--dart-define=API_BASE_URL=https://staging-api.example.com/api`.
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://10.0.2.2:8080/api',
+  );
   static const String authLogin = '/auth/login';
   static const String authRegister = '/auth/register';
   static const String authLogout = '/auth/logout';
