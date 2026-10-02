@@ -1232,16 +1232,14 @@ func TestIntegration_SQLInjection_Location_NoLeak(t *testing.T) {
 
 	responseBody := w.Body.String()
 
-	// Verify no SQL keywords
-	if strings.Contains(strings.ToLower(responseBody), "drop") ||
-		strings.Contains(strings.ToLower(responseBody), "table") {
-		t.Errorf("response contains SQL content: %s", responseBody)
-	}
-
-	// Verify valid JSON response
+	// User input may be echoed in JSON, but it must remain data rather than
+	// affecting the response structure or repository operation.
 	var response map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Errorf("response is not valid JSON: %v", err)
+	}
+	if response["name"] != payload["name"] {
+		t.Errorf("location name was not preserved as data: %s", responseBody)
 	}
 }
 
@@ -1761,10 +1759,14 @@ func TestStructuredLogging_CheckInSuccess(t *testing.T) {
 
 	userID := uuid.New()
 	payload := map[string]interface{}{
-		"latitude":    6.2,
-		"longitude":   106.8,
-		"device_uuid": "550e8400-e29b-41d4-a716-446655440000",
-		"signature":   "test_signature",
+		"latitude":           6.2,
+		"longitude":          106.8,
+		"device_uuid":        "550e8400-e29b-41d4-a716-446655440000",
+		"timestamp":          time.Now().Unix(),
+		"hmac_signature":     "test_signature",
+		"liveness_challenge": "challenge",
+		"liveness_token":     "token",
+		"idempotency_key":    uuid.NewString(),
 	}
 	b, _ := json.Marshal(payload)
 
@@ -2083,7 +2085,6 @@ func TestStructuredLogging_ErrorResponseFormatConsistent(t *testing.T) {
 		})
 	}
 }
-
 
 // TestIntentionalFailure_CIPipelineValidation_FIXED - FIXED: Previously intentional failure now passes
 // This test was intentionally failing in the previous commit to validate CI/CD pipeline detection

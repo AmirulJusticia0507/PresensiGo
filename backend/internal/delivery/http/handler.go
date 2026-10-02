@@ -211,7 +211,7 @@ func (h *Handler) CheckIn(w http.ResponseWriter, r *http.Request) {
 	userID := getUserIDFromContext(r)
 	if userID == uuid.Nil {
 		log.Printf("[%s] Unauthorized check-in attempt", requestID)
-		respondError(w, http.StatusUnauthorized, "unauthorized")
+		respondError(w, http.StatusUnauthorized, "unauthorized", requestID)
 		return
 	}
 
@@ -238,7 +238,7 @@ func (h *Handler) CheckOut(w http.ResponseWriter, r *http.Request) {
 	userID := getUserIDFromContext(r)
 	if userID == uuid.Nil {
 		log.Printf("[%s] Unauthorized check-out attempt", requestID)
-		respondError(w, http.StatusUnauthorized, "unauthorized")
+		respondError(w, http.StatusUnauthorized, "unauthorized", requestID)
 		return
 	}
 
@@ -531,8 +531,12 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(data)
 }
-func respondError(w http.ResponseWriter, status int, message string) {
-	respondJSON(w, status, map[string]string{"error": message})
+func respondError(w http.ResponseWriter, status int, message string, requestIDs ...string) {
+	response := map[string]string{"error": message}
+	if len(requestIDs) > 0 {
+		response["requestID"] = requestIDs[0]
+	}
+	respondJSON(w, status, response)
 }
 
 // respondWithError uses the centralized error handler for consistent error responses
@@ -550,7 +554,7 @@ func requireAdmin(w http.ResponseWriter, r *http.Request) bool {
 	role := middleware.GetRoleFromContext(r.Context())
 	if role != "admin" {
 		log.Printf("[%s] Authorization failed: admin role required", requestID)
-		respondError(w, http.StatusForbidden, "admin role required")
+		respondError(w, http.StatusForbidden, "admin role required", requestID)
 		return false
 	}
 	return true
