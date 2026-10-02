@@ -2,10 +2,22 @@ package repository
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/PresensiGo/backend/internal/model"
 	"github.com/google/uuid"
 )
+
+// FindStartTime resolves a user-specific schedule first, then a location
+// schedule for the given weekday. The bool is false when no rule exists.
+func (r *AttendanceRepository) FindStartTime(userID, locationID uuid.UUID, day int) (time.Time, int, bool) {
+	var start time.Time
+	var tolerance int
+	err := r.db.QueryRow(`SELECT start_time, late_after_minutes FROM work_schedules
+		WHERE active=TRUE AND day_of_week=$1 AND (user_id=$2 OR (user_id IS NULL AND location_id=$3))
+		ORDER BY (user_id IS NOT NULL) DESC LIMIT 1`, day, userID, locationID).Scan(&start, &tolerance)
+	return start, tolerance, err == nil
+}
 
 type AttendanceRepository struct {
 	db *sql.DB

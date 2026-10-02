@@ -16,4 +16,11 @@ class ApiConstants {
   static const String profilePassword = '/profile/password';
   static const String locationAttempts = '/security/location-attempts';
   static const String locationAlerts = '/admin/security/location-alerts';
+  static const String attendanceHistoryPage = '/attendance/history/page';
+  static const String leaves = '/leaves';
+  static const String adminAttendances = '/admin/attendances';
+  static const String adminAttendanceCsv = '/admin/attendances.csv';
+  static const String adminUsers = '/admin/users';
+  static const String adminSchedules = '/admin/schedules';
+  static const String adminLeaves = '/admin/leaves';
 }

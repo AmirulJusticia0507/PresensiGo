@@ -49,6 +49,7 @@ func main() {
 	attRepo := repository.NewAttendanceRepository(db)
 	offlineRepo := repository.NewOfflineQueueRepository(db)
 	fraudRepo := repository.NewFraudAttemptRepository(db)
+	adminRepo := repository.NewAdminRepository(db)
 
 	minioCtx, cancelMinio := context.WithTimeout(context.Background(), 10*time.Second)
 	minioClient, err := storage.NewClient(
@@ -73,7 +74,7 @@ func main() {
 	attUc := usecase.NewAttendanceUsecase(attRepo, userRepo, offlineRepo, cfg, minioClient, faceAI)
 	profileUc := usecase.NewProfileUsecase(userRepo)
 
-	httpHandler := deliveryhttp.NewHandler(authUc, attUc, profileUc, db, redisClient, fraudRepo)
+	httpHandler := deliveryhttp.NewHandler(authUc, attUc, profileUc, db, redisClient, fraudRepo, adminRepo)
 
 	middleware.InitJWT(cfg.JWT.Secret, cfg.JWT.ExpireHour)
 
@@ -128,6 +129,17 @@ func main() {
 	defaultLimitRouter.HandleFunc("/api/face/challenge", httpHandler.GetFaceChallenge).Methods("POST")
 	defaultLimitRouter.HandleFunc("/api/security/location-attempts", httpHandler.ReportFraudAttempt).Methods("POST")
 	defaultLimitRouter.HandleFunc("/api/admin/security/location-alerts", httpHandler.GetFraudAlerts).Methods("GET")
+	defaultLimitRouter.HandleFunc("/api/attendance/history/page", httpHandler.GetHistoryPage).Methods("GET")
+	defaultLimitRouter.HandleFunc("/api/leaves", httpHandler.CreateLeave).Methods("POST")
+	defaultLimitRouter.HandleFunc("/api/leaves", httpHandler.ListMyLeaves).Methods("GET")
+	defaultLimitRouter.HandleFunc("/api/admin/attendances", httpHandler.AdminAttendances).Methods("GET")
+	defaultLimitRouter.HandleFunc("/api/admin/attendances.csv", httpHandler.ExportAttendancesCSV).Methods("GET")
+	defaultLimitRouter.HandleFunc("/api/admin/users", httpHandler.AdminUsers).Methods("GET")
+	defaultLimitRouter.HandleFunc("/api/admin/users/{id}", httpHandler.AdminUpdateUser).Methods("PATCH")
+	defaultLimitRouter.HandleFunc("/api/admin/users/{id}", httpHandler.AdminDeleteUser).Methods("DELETE")
+	defaultLimitRouter.HandleFunc("/api/admin/schedules", httpHandler.AdminSchedules).Methods("GET", "POST")
+	defaultLimitRouter.HandleFunc("/api/admin/leaves", httpHandler.AdminLeaves).Methods("GET")
+	defaultLimitRouter.HandleFunc("/api/admin/leaves/{id}", httpHandler.AdminReviewLeave).Methods("PATCH")
 
 	// Password change with stricter rate limit
 	passwordLimitRouter := protectedRouter.NewRoute().Subrouter()

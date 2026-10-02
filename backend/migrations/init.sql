@@ -13,6 +13,12 @@ CREATE TABLE users (
     face_embedding BYTEA,
     face_similarity_threshold DECIMAL(4, 3) NOT NULL DEFAULT 0.450,
     face_enrolled_at TIMESTAMP WITH TIME ZONE,
+    phone VARCHAR(20),
+    emergency_contact_name VARCHAR(100),
+    emergency_contact_phone VARCHAR(20),
+    address TEXT,
+    profile_picture_url VARCHAR(500),
+    terms_accepted_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -85,6 +91,38 @@ CREATE TABLE offline_queue (
     sync_attempts INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Work rules can target a whole location or override one user.
+CREATE TABLE work_schedules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    location_id UUID REFERENCES locations(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    late_after_minutes INTEGER NOT NULL DEFAULT 0 CHECK (late_after_minutes BETWEEN 0 AND 1440),
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    CHECK (location_id IS NOT NULL OR user_id IS NOT NULL)
+);
+CREATE UNIQUE INDEX idx_work_schedules_location_day ON work_schedules(location_id, day_of_week) WHERE user_id IS NULL;
+CREATE UNIQUE INDEX idx_work_schedules_user_day ON work_schedules(user_id, day_of_week) WHERE user_id IS NOT NULL;
+
+CREATE TABLE leave_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    type VARCHAR(20) NOT NULL CHECK (type IN ('leave', 'sick', 'permission')),
+    reason VARCHAR(500) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    reviewed_by UUID REFERENCES users(id),
+    reviewed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    CHECK (end_date >= start_date)
+);
+CREATE INDEX idx_leave_requests_user_status ON leave_requests(user_id, status, start_date DESC);
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

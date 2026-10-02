@@ -144,6 +144,10 @@ func (u *AttendanceUsecase) checkIn(userID uuid.UUID, req *model.CheckInRequest,
 
 	now := time.Now()
 	isLate := now.Hour() >= 9
+	if start, tolerance, ok := u.attRepo.FindStartTime(userID, location.ID, int(now.Weekday())); ok {
+		deadline := time.Date(now.Year(), now.Month(), now.Day(), start.Hour(), start.Minute(), 0, 0, now.Location()).Add(time.Duration(tolerance) * time.Minute)
+		isLate = now.After(deadline)
+	}
 
 	att := &model.Attendance{
 		ID:                    uuid.New(),

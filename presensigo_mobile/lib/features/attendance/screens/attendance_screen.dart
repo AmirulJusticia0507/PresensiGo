@@ -49,6 +49,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Future<void> _loadData() async {
+    await ApiService.loadCurrentUser();
     await _getCurrentLocation();
     await _checkTodayAttendance();
     setState(() => _isLoading = false);
@@ -106,6 +107,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               : 'Turn your head slightly to the right, then take the selfie.',
         ),
         actions: [
+          if (ApiService.currentUser?.role == 'admin')
+            IconButton(
+              icon: const Icon(Icons.admin_panel_settings_outlined),
+              tooltip: 'Admin dashboard',
+              onPressed: () => Navigator.pushNamed(context, '/admin'),
+            ),
+          IconButton(
+            icon: const Icon(Icons.event_available_outlined),
+            tooltip: 'Leave requests',
+            onPressed: () => Navigator.pushNamed(context, '/leaves'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Open camera'),

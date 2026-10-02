@@ -15,6 +15,8 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   List<AttendanceModel> _history = [];
   bool _isLoading = true;
+  int _total = 0;
+  String? _status;
 
   @override
   void initState() {
@@ -24,10 +26,31 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<void> _loadHistory() async {
     setState(() => _isLoading = true);
-    final history = await ApiService.getHistory(limit: 20);
+    final page = await ApiService.getHistoryPage(limit: 20, status: _status);
+    final history = (page['items'] as List<dynamic>)
+        .map((item) => AttendanceModel.fromJson(item as Map<String, dynamic>))
+        .toList();
     setState(() {
       _history = history;
+      _total = page['total'] as int? ?? history.length;
       _isLoading = false;
+    });
+  }
+
+  Future<void> _loadMore() async {
+    final page = await ApiService.getHistoryPage(
+      limit: 20,
+      offset: _history.length,
+      status: _status,
+    );
+    if (!mounted) return;
+    setState(() {
+      _history.addAll(
+        (page['items'] as List<dynamic>).map(
+          (item) => AttendanceModel.fromJson(item as Map<String, dynamic>),
+        ),
+      );
+      _total = page['total'] as int? ?? _history.length;
     });
   }
 
@@ -56,22 +79,58 @@ class _HistoryScreenState extends State<HistoryScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _history.isEmpty
-          ? _buildEmptyState()
-          : RefreshIndicator(
-              onRefresh: _loadHistory,
-              color: AppTheme.primaryColor,
-              child: ListView.builder(
-                padding: const EdgeInsets.all(20),
-                itemCount: _history.length,
-                itemBuilder: (context, index) {
-                  final attendance = _history[index];
-                  return _buildAttendanceCard(attendance, index);
-                },
-              ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+            child: DropdownButtonFormField<String?>(
+              initialValue: _status,
+              decoration: const InputDecoration(labelText: 'Filter status'),
+              items: const [
+                DropdownMenuItem(value: null, child: Text('All statuses')),
+                DropdownMenuItem(value: 'present', child: Text('Present')),
+                DropdownMenuItem(value: 'late', child: Text('Late')),
+                DropdownMenuItem(value: 'leave', child: Text('Leave')),
+                DropdownMenuItem(value: 'absent', child: Text('Absent')),
+              ],
+              onChanged: (value) {
+                _status = value;
+                _loadHistory();
+              },
             ),
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _history.isEmpty
+                ? _buildEmptyState()
+                : RefreshIndicator(
+                    onRefresh: _loadHistory,
+                    color: AppTheme.primaryColor,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(20),
+                      itemCount:
+                          _history.length + (_history.length < _total ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == _history.length) {
+                          return Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: OutlinedButton(
+                              onPressed: _loadMore,
+                              child: Text(
+                                'Load more (${_history.length}/$_total)',
+                              ),
+                            ),
+                          );
+                        }
+                        final attendance = _history[index];
+                        return _buildAttendanceCard(attendance, index);
+                      },
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -70,6 +70,7 @@ type Handler struct {
 	db          DBPinger
 	redisClient RedisClientIface
 	fraudRepo   *repository.FraudAttemptRepository
+	adminRepo   *repository.AdminRepository
 }
 
 func NewHandler(authUc AuthUsecaseIface, attUc AttendanceUsecaseIface, profileUc ProfileUsecaseIface, dependencies ...any) *Handler {
@@ -82,6 +83,9 @@ func NewHandler(authUc AuthUsecaseIface, attUc AttendanceUsecaseIface, profileUc
 	}
 	if len(dependencies) > 2 {
 		handler.fraudRepo, _ = dependencies[2].(*repository.FraudAttemptRepository)
+	}
+	if len(dependencies) > 3 {
+		handler.adminRepo, _ = dependencies[3].(*repository.AdminRepository)
 	}
 	return handler
 }
@@ -182,6 +186,7 @@ func (h *Handler) RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/api/face/challenge", h.GetFaceChallenge).Methods("POST")
 	r.HandleFunc("/api/security/location-attempts", h.ReportFraudAttempt).Methods("POST")
 	r.HandleFunc("/api/admin/security/location-alerts", h.GetFraudAlerts).Methods("GET")
+	h.registerAdminRoutes(r)
 }
 
 const repeatedFraudThreshold = 3

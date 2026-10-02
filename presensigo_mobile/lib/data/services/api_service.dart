@@ -431,4 +431,88 @@ class ApiService {
     }
     return [];
   }
+
+  static Future<UserModel?> loadCurrentUser() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.profile}'),
+        headers: await _headers(),
+      );
+      if (response.statusCode == 200) {
+        _currentUser = UserModel.fromJson(jsonDecode(response.body));
+      }
+    } catch (_) {}
+    return _currentUser;
+  }
+
+  static Future<Map<String, dynamic>> getHistoryPage({
+    int limit = 20,
+    int offset = 0,
+    String? status,
+    String? dateFrom,
+    String? dateTo,
+    String? locationId,
+  }) async {
+    final query = <String, String>{
+      'limit': '$limit',
+      'offset': '$offset',
+      if (status != null && status.isNotEmpty) 'status': status,
+      'date_from': ?dateFrom,
+      'date_to': ?dateTo,
+      'location_id': ?locationId,
+    };
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}${ApiConstants.attendanceHistoryPage}',
+    ).replace(queryParameters: query);
+    final response = await http.get(uri, headers: await _headers());
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    return {'items': <dynamic>[], 'total': 0, 'limit': limit, 'offset': offset};
+  }
+
+  static Future<dynamic> adminRequest(
+    String path, {
+    String method = 'GET',
+    Map<String, dynamic>? body,
+  }) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}$path');
+    final headers = await _headers();
+    late http.Response response;
+    switch (method) {
+      case 'POST':
+        response = await http.post(
+          uri,
+          headers: headers,
+          body: jsonEncode(body),
+        );
+        break;
+      case 'PATCH':
+        response = await http.patch(
+          uri,
+          headers: headers,
+          body: jsonEncode(body),
+        );
+        break;
+      case 'DELETE':
+        response = await http.delete(uri, headers: headers);
+        break;
+      default:
+        response = await http.get(uri, headers: headers);
+    }
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) return <String, dynamic>{};
+      return jsonDecode(response.body);
+    }
+    throw Exception('Request failed (${response.statusCode})');
+  }
+
+  static Future<String> exportAttendancesCsv() async {
+    final response = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}${ApiConstants.adminAttendanceCsv}'),
+      headers: await _headers(),
+    );
+    if (response.statusCode == 200) return response.body;
+    throw Exception('CSV export failed (${response.statusCode})');
+  }
 }

@@ -5,6 +5,8 @@ import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/splash_screen.dart';
 import 'features/auth/screens/biometric_unlock_screen.dart';
 import 'features/attendance/screens/attendance_screen.dart';
+import 'features/admin/screens/admin_dashboard_screen.dart';
+import 'features/leave/screens/leave_screen.dart';
 import 'data/services/offline_queue_service.dart';
 
 Future<void> main() async {
@@ -28,6 +30,8 @@ class PresensiGoApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/attendance': (context) => const AttendanceScreen(),
         '/biometric-unlock': (context) => const BiometricUnlockScreen(),
+        '/admin': (context) => const AdminDashboardScreen(),
+        '/leaves': (context) => const LeaveScreen(),
       },
     );
   }
