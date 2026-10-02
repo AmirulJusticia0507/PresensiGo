@@ -387,6 +387,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         leading: _isEditing
             ? IconButton(
+                key: ProfileScreen.cancelButtonKey,
                 icon: const Icon(Icons.close),
                 onPressed: _cancelEdit,
               )
@@ -726,6 +727,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildFormLabel('Address'),
           const SizedBox(height: 8),
           _buildTextField(
+            key: ProfileScreen.addressFieldKey,
             controller: _addressController,
             label: 'Full Address',
             minLines: 2,
@@ -745,6 +747,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
+              key: ProfileScreen.saveButtonKey,
               onPressed: _isSaving ? null : _saveProfile,
               child: _isSaving
                   ? const SizedBox(

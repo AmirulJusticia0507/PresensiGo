@@ -151,8 +151,14 @@ void main() {
     });
 
     test('validatePhone accepts phone with many digits', () {
-      final result = FormValidator.validatePhone('+1234567890123456');
+      // E.164 allows at most 15 digits after the leading '+'.
+      final result = FormValidator.validatePhone('+123456789012345');
       expect(result.isValid, true);
+    });
+
+    test('validatePhone rejects phone exceeding the E.164 digit limit', () {
+      final result = FormValidator.validatePhone('+1234567890123456');
+      expect(result.isValid, false);
     });
 
     test('validatePhone rejects without plus sign', () {

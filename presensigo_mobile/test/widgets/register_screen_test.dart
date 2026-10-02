@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:presensigo_app/core/constants/api_constants.dart';
 import 'package:presensigo_app/data/services/profile_service.dart';
 import 'package:presensigo_app/data/services/session_manager.dart';
 import 'package:presensigo_app/features/auth/screens/register_screen.dart';

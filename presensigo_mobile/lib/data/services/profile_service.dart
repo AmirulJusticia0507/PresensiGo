@@ -162,12 +162,10 @@ class ProfileService {
       // Build request with only provided fields
       final body = <String, dynamic>{
         'name': name,
-        if (phone != null) 'phone': phone,
-        if (emergencyContactName != null)
-          'emergency_contact_name': emergencyContactName,
-        if (emergencyContactPhone != null)
-          'emergency_contact_phone': emergencyContactPhone,
-        if (address != null) 'address': address,
+        'phone': ?phone,
+        'emergency_contact_name': ?emergencyContactName,
+        'emergency_contact_phone': ?emergencyContactPhone,
+        'address': ?address,
       };
 
       final response = await _client

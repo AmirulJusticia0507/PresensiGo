@@ -297,9 +297,11 @@ class FormValidator {
       strength++;
     }
 
-    if (strength <= 1) {
+    // Of five requirements (upper, lower, digit, special, length), meeting only
+    // one or two is not strong enough to call "medium".
+    if (strength <= 2) {
       return PasswordStrength.weak;
-    } else if (strength <= 3) {
+    } else if (strength <= 4) {
       return PasswordStrength.medium;
     } else {
       return PasswordStrength.strong;

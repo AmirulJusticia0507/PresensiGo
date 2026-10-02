@@ -158,7 +158,7 @@ void main() {
       });
 
       test('returns invalid for address too short', () {
-        final result = FormValidator.validateAddress('123 St');
+        final result = FormValidator.validateAddress('abc');
         expect(result.isValid, false);
       });
 

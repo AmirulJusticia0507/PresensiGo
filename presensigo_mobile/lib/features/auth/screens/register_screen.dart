@@ -170,8 +170,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // Navigate to AttendanceScreen (ProfileScreen will be available from there)
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          pageBuilder: (_, animation, __) => const AttendanceScreen(),
-          transitionsBuilder: (_, animation, __, child) {
+          pageBuilder: (_, _, _) => const AttendanceScreen(),
+          transitionsBuilder: (_, animation, _, child) {
             return FadeTransition(opacity: animation, child: child);
           },
         ),
@@ -185,8 +185,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         } else if (e.statusCode == 400 && e.details != null) {
           // Parse field-level errors
           for (final detail in e.details!) {
-            final field = detail['field'] as String?;
-            final reason = detail['reason'] as String?;
+            final field = detail['field'];
+            final reason = detail['reason'];
             if (field != null && reason != null) {
               _fieldErrors[field] = reason;
             }
