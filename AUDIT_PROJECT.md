@@ -728,6 +728,44 @@ sudah terpenuhi; level menunjukkan risiko operasional yang masih perlu dipantau,
 
 ---
 
+## 📋 Session Progress Log
+
+### P2 #1 — Mobile Profile & Register Flow (Selesai 3 Oktober 2026)
+
+**Commit:** `feat(p2-1): Wave 3-5 complete` (9010338) + `feat(p2-1): Wave 1-2 Foundation` (f796608)
+**Branch:** main
+
+**Yang dikerjakan:**
+- Wave 1: User model diperluas (phone, emergency contact, address, profile picture, terms)
+- Wave 2: UserRepository (CreateUser, GetUserByEmail, UpdateUser, UpdatePassword), migration `004_profile_fields.sql`
+- Wave 3: Backend handlers — POST /api/auth/register (3/min rate limit), GET/PUT /api/profile, PUT /api/profile/password
+- Wave 4: Mobile UI — RegisterScreen (form + password strength), ProfileScreen (read/edit + password dialog), ProfileService API client, FormValidator
+- Wave 5: 46+ backend unit tests (validation, bcrypt, ProfileUsecase mock) — semua PASS; 30+ mobile test files
+
+**File utama:**
+- `backend/internal/usecase/profile_usecase.go` — business logic + validation
+- `backend/internal/usecase/profile_usecase_test.go` — 46 unit tests, semua PASS
+- `backend/internal/delivery/http/handler.go` — 3 handlers baru
+- `presensigo_mobile/lib/features/auth/screens/register_screen.dart`
+- `presensigo_mobile/lib/features/profile/screens/profile_screen.dart`
+- `presensigo_mobile/lib/data/services/profile_service.dart`
+- `presensigo_mobile/lib/core/utils/form_validator.dart`
+
+**Keputusan teknis:**
+- bcrypt cost 12 (balance keamanan vs performa ~100ms/hash)
+- Email validation: RFC 5322 regex + database uniqueness check
+- Generic error messages untuk password change (tidak bocorkan detail)
+- ProfileService singleton dengan cache 1 jam di SharedPreferences
+- Rate limiting: register 3/min, password change lebih ketat
+
+### P2 Berikutnya (Todo)
+
+- **P2 #2:** Admin Dashboard (attendance view, CSV export, user/location management)
+- **P2 #3:** Pagination & Filtering History (limit/offset/total, filter date/status/location)
+- **P2 #4:** Attendance Rules & Scheduling (jadwal per lokasi/user, toleransi terlambat, cuti)
+
+---
+
 ## Next Steps
 
 ### Immediate Actions (Post-Milestone 2)
