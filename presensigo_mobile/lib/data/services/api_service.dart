@@ -384,10 +384,37 @@ class ApiService {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return {'success': true, ...data};
     }
-    return {
-      'success': false,
-      'message': 'Failed to get sync status',
-    };
+    return {'success': false, 'message': 'Failed to get sync status'};
+  }
+
+  /// Best-effort security telemetry. A reporting failure must never turn a
+  /// locally rejected attendance attempt into an accepted one.
+  static Future<void> reportLocationAttempt({
+    required String reason,
+    required String platform,
+    required double latitude,
+    required double longitude,
+    required double accuracy,
+  }) async {
+    try {
+      await http
+          .post(
+            Uri.parse(
+              '${ApiConstants.baseUrl}${ApiConstants.locationAttempts}',
+            ),
+            headers: await _headers(),
+            body: jsonEncode({
+              'reason': reason,
+              'platform': platform,
+              'latitude': latitude,
+              'longitude': longitude,
+              'accuracy': accuracy,
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {
+      // Deliberately ignored: the suspicious action is already blocked.
+    }
   }
 
   static Future<List<LocationModel>> getLocations() async {

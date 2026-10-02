@@ -59,6 +59,13 @@ class LocationService {
     return null;
   }
 
+  /// Stable telemetry code; unlike the user-facing text this is safe to group.
+  static String? rejectionCode(Position position) {
+    if (isMockPosition(position)) return 'mock_location';
+    if (!isAcceptableAccuracy(position)) return 'low_accuracy';
+    return null;
+  }
+
   static double calculateDistance(
     double lat1,
     double lon1,

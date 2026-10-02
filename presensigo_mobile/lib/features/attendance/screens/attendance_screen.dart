@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -76,6 +77,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     final spoofReason = LocationService.rejectionReason(_currentPosition!);
     if (spoofReason != null) {
+      await _reportRejectedLocation(_currentPosition!);
       _showError(spoofReason);
       return;
     }
@@ -256,6 +258,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     final spoofReason = LocationService.rejectionReason(_currentPosition!);
     if (spoofReason != null) {
+      await _reportRejectedLocation(_currentPosition!);
       _showError(spoofReason);
       return;
     }
@@ -306,6 +309,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     } else {
       _showError(result['message']);
     }
+  }
+
+  Future<void> _reportRejectedLocation(Position position) async {
+    final reason = LocationService.rejectionCode(position);
+    if (reason == null) return;
+    await ApiService.reportLocationAttempt(
+      reason: reason,
+      platform: Platform.isIOS ? 'ios' : 'android',
+      latitude: position.latitude,
+      longitude: position.longitude,
+      accuracy: position.accuracy,
+    );
   }
 
   void _showError(String message) {
@@ -444,14 +459,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             ),
                     ),
                     ValueListenableBuilder<int>(
-                      valueListenable:
-                          OfflineQueueService.instance.stuckCount,
+                      valueListenable: OfflineQueueService.instance.stuckCount,
                       builder: (context, count, _) => count == 0
                           ? const SizedBox.shrink()
                           : Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: Card(
-                                color: AppTheme.errorColor.withValues(alpha: 0.1),
+                                color: AppTheme.errorColor.withValues(
+                                  alpha: 0.1,
+                                ),
                                 child: Padding(
                                   padding: const EdgeInsets.all(12),
                                   child: Row(
@@ -595,10 +611,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   Expanded(
                     child: Text(
                       _fixStatus.warning!,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: _fixStatus.color,
-                      ),
+                      style: TextStyle(fontSize: 13, color: _fixStatus.color),
                     ),
                   ),
                 ],
@@ -613,10 +626,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   _FixStatus get _fixStatus {
     final position = _currentPosition;
     if (position == null) {
-      return const _FixStatus(
-        label: 'Waiting',
-        color: AppTheme.warningColor,
-      );
+      return const _FixStatus(label: 'Waiting', color: AppTheme.warningColor);
     }
     final reason = LocationService.rejectionReason(position);
     if (reason != null) {
@@ -812,11 +822,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
 /// Presentation state for the current GPS fix shown on the location card.
 class _FixStatus {
-  const _FixStatus({
-    required this.label,
-    required this.color,
-    this.warning,
-  });
+  const _FixStatus({required this.label, required this.color, this.warning});
 
   final String label;
   final Color color;

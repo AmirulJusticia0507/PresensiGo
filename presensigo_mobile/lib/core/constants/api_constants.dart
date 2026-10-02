@@ -1,7 +1,9 @@
 class ApiConstants {
+  /// Base URL including the `/api` prefix, so paths below are appended directly.
   static const String baseUrl = 'http://localhost:8080/api';
   static const String authLogin = '/auth/login';
   static const String authRegister = '/auth/register';
+  static const String authLogout = '/auth/logout';
   static const String attendanceCheckIn = '/attendance/check-in';
   static const String attendanceCheckOut = '/attendance/check-out';
   static const String attendanceToday = '/attendance/today';
@@ -10,4 +12,8 @@ class ApiConstants {
   static const String locations = '/locations';
   static const String faceChallenge = '/face/challenge';
   static const String faceEnrollment = '/profile/face-enrollment';
+  static const String profile = '/profile';
+  static const String profilePassword = '/profile/password';
+  static const String locationAttempts = '/security/location-attempts';
+  static const String locationAlerts = '/admin/security/location-alerts';
 }

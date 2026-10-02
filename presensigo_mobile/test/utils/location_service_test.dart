@@ -117,4 +117,27 @@ void main() {
       expect(LocationService.rejectionReason(position), isNull);
     });
   });
+
+  group('LocationService.rejectionCode', () {
+    test('returns stable telemetry codes', () {
+      expect(
+        LocationService.rejectionCode(
+          buildPosition(latitude: 0, longitude: 0, accuracy: 5, isMocked: true),
+        ),
+        'mock_location',
+      );
+      expect(
+        LocationService.rejectionCode(
+          buildPosition(latitude: 0, longitude: 0, accuracy: 120),
+        ),
+        'low_accuracy',
+      );
+      expect(
+        LocationService.rejectionCode(
+          buildPosition(latitude: 0, longitude: 0, accuracy: 8),
+        ),
+        isNull,
+      );
+    });
+  });
 }

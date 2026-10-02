@@ -583,9 +583,9 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
 - **Estimated Effort:** 5 days (local storage + sync logic + deduplication + background service)
 - **Test:** Queue action offline, go online, verify synced; simulate duplicate submission (should be idempotent).
 
-#### 🔄 3.4 Mock Location Detection & Anti-Fraud Measures
+#### ✅ 3.4 Mock Location Detection & Anti-Fraud Measures
 
-- **Status:** 🔄 IN PROGRESS (velocity check + client-side mock/accuracy detection done)
+- **Status:** ✅ DONE (layered MVP controls implemented; manual device validation remains a release check)
 - **Description:**
   - [X] Detect mock location apps on Android: check Settings.Secure.ALLOW_MOCK_LOCATION or GPS accuracy / velocity anomalies
     - Implemented via `geolocator`'s `Position.isMocked` (Android mock provider, iOS 15+ `isSimulatedBySoftware`)
@@ -595,14 +595,21 @@ Camera/Selfie, Face AI, Offline Sync, Mock Location Detection, Complete Mobile F
     - `implausibleTravelSpeedKmh()` compares the previous check-out position; >1000 km/h is rejected,
       > 200 km/h is logged for review
       >
-  - [ ] On iOS: extend beyond `isMocked` (no public API for detecting jailbroken/mock routing apps)
-  - [ ] Optional: log and alert admin of repeated mock location attempts (potential fraud)
-    - Currently only server-side logging; no admin alert surface yet
-  - [ ] Define threat model: is mock location detection required for MVP or defer to Phase 2?
+  - [X] On iOS: extend beyond `isMocked`
+    - Uses `CLLocation.isSimulatedBySoftware` through `geolocator`, accuracy rejection, geofence validation,
+      device binding/HMAC, and server-side velocity analysis. Jailbreak detection is intentionally excluded:
+      iOS has no reliable public API for it and it is bypassable, so it is not treated as a trust boundary.
+  - [X] Log and alert admin of repeated mock location attempts (potential fraud)
+    - Rejected client attempts are stored in `fraud_attempts`; 3+ attempts per user in 24 hours emit a
+      security log and appear in `GET /api/admin/security/location-alerts` (admin-only).
+  - [X] Define threat model: mock location detection is required for MVP
+    - MVP blocks explicit mock/simulated fixes, low-accuracy fixes, geofence violations, device/HMAC
+      failures, and physically impossible travel. Signals are defense-in-depth rather than proof of a
+      trustworthy device; stronger device attestation is deferred to Phase 2.
 - **Priority:** Medium — fraud prevention; can be deferred if low-risk environment
 - **Estimated Effort:** 2 days (detection + logging, may vary by platform)
 - **Test:** Unit tests cover `haversine`, `implausibleTravelSpeedKmh`, and the Flutter-side
-  mock/accuracy rejection. Manual device test still required: enable mock location, attempt
+  mock/accuracy rejection and telemetry classification. Manual device test still required: enable mock location, attempt
   check-in (should be rejected); disable mock location, retry (should succeed).
 
 #### ❌ 3.5 Complete Mobile Features & Admin Flow
