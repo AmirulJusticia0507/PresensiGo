@@ -53,6 +53,7 @@ jobs:
         with:
           working-directory: backend
           version: v2.14.0
+          only-new-issues: true
       
       - name: Generate coverage
         run: cd backend && go test ./... -coverprofile=coverage.out
