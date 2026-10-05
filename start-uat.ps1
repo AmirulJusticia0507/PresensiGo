@@ -36,13 +36,13 @@ Set-Location $PSScriptRoot
 Write-Host ""
 Write-Host "Step 5: Building APK with IP=$IP ..." -ForegroundColor Green
 Set-Location "$PSScriptRoot\presensigo_mobile"
-flutter build apk --debug --dart-define="API_BASE_URL=http://$IP`:8080/api"
+flutter build apk --debug --dart-define="API_BASE_URL=http://$IP`:8088/api"
 Set-Location $PSScriptRoot
 
 Write-Host ""
 Write-Host "=== UAT Ready! ===" -ForegroundColor Cyan
 Write-Host "APK location: presensigo_mobile\build\app\outputs\flutter-apk\app-debug.apk" -ForegroundColor White
-Write-Host "Backend URL: http://$IP`:8080" -ForegroundColor White
+Write-Host "Backend URL: http://$IP`:8088" -ForegroundColor White
 Write-Host "Admin credentials: admin@presensigo.local / admin123" -ForegroundColor White
 Write-Host "Employee credentials: employee@presensigo.local / employee123" -ForegroundColor White
 Write-Host ""

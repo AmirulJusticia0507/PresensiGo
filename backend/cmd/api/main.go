@@ -149,7 +149,7 @@ func main() {
 
 	port := cfg.Server.Port
 	if port == "" {
-		port = "8080"
+		port = "8088"
 	}
 
 	// Load environment-specific CORS configuration

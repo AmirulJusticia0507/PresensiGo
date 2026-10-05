@@ -94,7 +94,7 @@ func Load() *Config {
 			ExpireHour: getEnvInt("JWT_EXPIRE_HOUR", 24),
 		},
 		Server: ServerConfig{
-			Port: getEnv("SERVER_PORT", "8080"),
+			Port: getEnv("SERVER_PORT", "8088"),
 			Mode: getEnv("SERVER_MODE", "debug"),
 		},
 	}

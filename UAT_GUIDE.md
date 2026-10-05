@@ -49,7 +49,7 @@ go run cmd/api/main.go
 The server will auto-apply migrations on startup. Wait for:
 ```
 ✓ Connected to database
-Server starting on port 8080
+Server starting on port 8088
 ```
 
 Leave this terminal open.
@@ -78,7 +78,7 @@ Replace `192.168.1.100` with your actual local IP from Step 1:
 cd presensigo_mobile
 
 flutter build apk --debug \
-  --dart-define=API_BASE_URL=http://192.168.1.100:8080/api
+  --dart-define=API_BASE_URL=http://192.168.1.100:8088/api
 
 # Install to connected device
 flutter install
@@ -86,7 +86,7 @@ flutter install
 
 Or run directly on connected device:
 ```bash
-flutter run --dart-define=API_BASE_URL=http://192.168.1.100:8080/api
+flutter run --dart-define=API_BASE_URL=http://192.168.1.100:8088/api
 ```
 
 ---
@@ -175,10 +175,10 @@ flutter run --dart-define=API_BASE_URL=http://192.168.1.100:8080/api
 ## Step 7: Verify Backend Health
 
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:8088/health
 # Expected: {"status":"ok"}
 
-curl http://localhost:8080/health/ready
+curl http://localhost:8088/health/ready
 # Expected: {"ready":true}
 ```
 

@@ -4,7 +4,7 @@ class ApiConstants {
   /// `--dart-define=API_BASE_URL=https://staging-api.example.com/api`.
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8080/api',
+    defaultValue: 'http://10.0.2.2:8088/api',
   );
   static const String authLogin = '/auth/login';
   static const String authRegister = '/auth/register';
