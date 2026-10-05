@@ -23,6 +23,7 @@ func (h *Handler) registerAdminRoutes(r *mux.Router) {
 	r.HandleFunc("/api/admin/users/{id}", h.AdminUpdateUser).Methods("PATCH")
 	r.HandleFunc("/api/admin/users/{id}", h.AdminDeleteUser).Methods("DELETE")
 	r.HandleFunc("/api/admin/schedules", h.AdminSchedules).Methods("GET", "POST")
+	r.HandleFunc("/api/admin/schedules/{id}", h.AdminDeleteSchedule).Methods("DELETE")
 	r.HandleFunc("/api/admin/leaves", h.AdminLeaves).Methods("GET")
 	r.HandleFunc("/api/admin/leaves/{id}", h.AdminReviewLeave).Methods("PATCH")
 }
@@ -223,6 +224,22 @@ func (h *Handler) AdminSchedules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, 201, req)
+}
+
+func (h *Handler) AdminDeleteSchedule(w http.ResponseWriter, r *http.Request) {
+	if !h.needAdminRepo(w, r, true) {
+		return
+	}
+	id, err := uuid.Parse(mux.Vars(r)["id"])
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid schedule ID")
+		return
+	}
+	if err := h.adminRepo.DeleteSchedule(r.Context(), id); err != nil {
+		respondError(w, http.StatusNotFound, "schedule not found")
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "schedule deleted"})
 }
 
 func (h *Handler) CreateLeave(w http.ResponseWriter, r *http.Request) {

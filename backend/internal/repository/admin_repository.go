@@ -107,9 +107,24 @@ func (r *AdminRepository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *AdminRepository) UpsertSchedule(ctx context.Context, s *model.WorkSchedule) error {
-	if s.ID == uuid.Nil {
-		s.ID = uuid.New()
+	if s.ID != uuid.Nil {
+		result, err := r.db.ExecContext(ctx, `UPDATE work_schedules SET location_id=$1,user_id=$2,
+			day_of_week=$3,start_time=$4,end_time=$5,late_after_minutes=$6,active=$7,updated_at=NOW()
+			WHERE id=$8`, s.LocationID, s.UserID, s.DayOfWeek, s.StartTime, s.EndTime,
+			s.LateAfterMinute, s.Active, s.ID)
+		if err != nil {
+			return err
+		}
+		count, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if count == 0 {
+			return sql.ErrNoRows
+		}
+		return nil
 	}
+	s.ID = uuid.New()
 	conflict := `(user_id,day_of_week) WHERE user_id IS NOT NULL`
 	if s.UserID == nil {
 		conflict = `(location_id,day_of_week) WHERE user_id IS NULL`
@@ -139,6 +154,21 @@ func (r *AdminRepository) ListSchedules(ctx context.Context) ([]model.WorkSchedu
 		items = append(items, s)
 	}
 	return items, rows.Err()
+}
+
+func (r *AdminRepository) DeleteSchedule(ctx context.Context, id uuid.UUID) error {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM work_schedules WHERE id=$1`, id)
+	if err != nil {
+		return err
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func (r *AdminRepository) CreateLeave(ctx context.Context, userID uuid.UUID, req model.CreateLeaveRequest) error {

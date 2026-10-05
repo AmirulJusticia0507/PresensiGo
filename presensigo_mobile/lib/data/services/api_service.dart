@@ -494,6 +494,13 @@ class ApiService {
           body: jsonEncode(body),
         );
         break;
+      case 'PUT':
+        response = await http.put(
+          uri,
+          headers: headers,
+          body: jsonEncode(body),
+        );
+        break;
       case 'DELETE':
         response = await http.delete(uri, headers: headers);
         break;

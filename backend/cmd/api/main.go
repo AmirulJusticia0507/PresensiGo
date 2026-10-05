@@ -138,6 +138,7 @@ func main() {
 	defaultLimitRouter.HandleFunc("/api/admin/users/{id}", httpHandler.AdminUpdateUser).Methods("PATCH")
 	defaultLimitRouter.HandleFunc("/api/admin/users/{id}", httpHandler.AdminDeleteUser).Methods("DELETE")
 	defaultLimitRouter.HandleFunc("/api/admin/schedules", httpHandler.AdminSchedules).Methods("GET", "POST")
+	defaultLimitRouter.HandleFunc("/api/admin/schedules/{id}", httpHandler.AdminDeleteSchedule).Methods("DELETE")
 	defaultLimitRouter.HandleFunc("/api/admin/leaves", httpHandler.AdminLeaves).Methods("GET")
 	defaultLimitRouter.HandleFunc("/api/admin/leaves/{id}", httpHandler.AdminReviewLeave).Methods("PATCH")
 
